@@ -6,12 +6,13 @@ canvas = tk.Canvas(root, width=400, height=400)
 canvas.pack()
 
 class Block:
-    # Constants
+    ### Constants
     EDGE_SIZE = 5
     EDGE_FILL = 'gray'
     CIRCLE_RADIUS = 5
     CIRCLE_FILL = 'gray'
 
+    ### Constructor
     def __init__(self, x1, y1, x2, y2, fill='blue', draggable=True, resizable=True):
         # Local vars
         self.coords = [x1, y1, x2, y2]
@@ -34,6 +35,11 @@ class Block:
         self.center = canvas.coords(self.base)
         self.center = [self.coords[0] + (self.coords[2] - self.coords[0]) / 2, self.coords[1] + (self.coords[3] - self.coords[1]) / 2]
     
+    ### Move a component
+    def move(self, component):
+        pass
+
+    ### Select an object
     def select(self, event):
         global start_x, start_y, selected, initial_coords
         start_x = event.x
@@ -41,6 +47,7 @@ class Block:
         selected = event.widget.find_closest(event.x, event.y)[0]
         initial_coords = [canvas.coords(c).copy() for c in self.components]
 
+    ### Handle a user dragging the mouse
     def drag(self, event):
         global start_x, start_y, selected, initial_coords
         dx = event.x - start_x
@@ -57,6 +64,7 @@ class Block:
         
         self.update_params()
 
+    ### Handle the user resizing an object
     def resize(self, event, dir):
         global start_x, start_y, selected, initial_coords
         dx = event.x - start_x
@@ -80,12 +88,13 @@ class Block:
                 # West edge
                 pass
 
-    
+    ### Create the base rectangle of the block
     def create_base(self):
         base = canvas.create_rectangle(self.coords[0], self.coords[1], self.coords[2], self.coords[3], fill=self.fill)
         self.components.append(base)
         return base
 
+    ### Create the circle in the center that is used for dragging
     def create_drag(self):
         circ = canvas.create_oval(self.center[0] - Block.CIRCLE_RADIUS, self.center[1] - Block.CIRCLE_RADIUS, self.center[0] + Block.CIRCLE_RADIUS, self.center[1] + Block.CIRCLE_RADIUS, fill=Block.CIRCLE_FILL)
         self.components.append(circ)
@@ -93,6 +102,7 @@ class Block:
         canvas.tag_bind(circ, '<Button 1>', self.select)
         canvas.tag_bind(circ, '<B1-Motion>', self.drag)
     
+    ### Create the rectangles on the edges that are used for resizing
     def create_resize(self):
         edges = []
         
