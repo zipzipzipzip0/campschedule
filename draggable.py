@@ -15,13 +15,11 @@ class Block:
     ### Constructor
     def __init__(self, x1, y1, x2, y2, fill='blue', draggable=True, resizable=True):
         # Local vars
-        self.coords = [x1, y1, x2, y2]
-        self.fill = fill
-        self.components = []
+        self.components = {}
 
-        # Handle base
-        self.base = self.create_base()
-        self.center = [self.coords[0] + (self.coords[2] - self.coords[0]) / 2, self.coords[1] + (self.coords[3] - self.coords[1]) / 2]
+        self.base = canvas.create_rectangle(x1, y1, x2, y2, fill=fill)
+        self.components.append(self.base)
+        self.center = [canvas.coords(self.base)[0] + (canvas.coords(self.base)[2] - canvas.coords(self.base)[0]) / 2, canvas.coords(self.base)[1] + (canvas.coords(self.base)[3] - canvas.coords(self.base)[1]) / 2]
 
         # Handle draggable
         if draggable:
@@ -31,12 +29,15 @@ class Block:
         if resizable:
             self.create_resize()
     
+    def store_component(self, component):
+        self.components[component]
+    
     def update_params(self):
         self.center = canvas.coords(self.base)
-        self.center = [self.coords[0] + (self.coords[2] - self.coords[0]) / 2, self.coords[1] + (self.coords[3] - self.coords[1]) / 2]
+        self.center = [canvas.coords(self.base)[0] + (canvas.coords(self.base)[2] - canvas.coords(self.base)[0]) / 2, canvas.coords(self.base)[1] + (canvas.coords(self.base)[3] - canvas.coords(self.base)[1]) / 2]
     
     ### Move a component
-    def move(self, component):
+    def move(self, component, d):
         pass
 
     ### Select an object
@@ -90,7 +91,7 @@ class Block:
 
     ### Create the base rectangle of the block
     def create_base(self):
-        base = canvas.create_rectangle(self.coords[0], self.coords[1], self.coords[2], self.coords[3], fill=self.fill)
+        base = canvas.create_rectangle(canvas.coords(self.base)[0], canvas.coords(self.base)[1], canvas.coords(self.base)[2], canvas.coords(self.base)[3], fill=self.fill)
         self.components.append(base)
         return base
 
@@ -106,8 +107,8 @@ class Block:
     def create_resize(self):
         edges = []
         
-        edge_n = canvas.create_rectangle(self.coords[0], self.coords[1], self.coords[2], self.coords[1] + Block.EDGE_SIZE, fill=Block.EDGE_FILL)
-        edge_s = canvas.create_rectangle(self.coords[0], self.coords[3] - Block.EDGE_SIZE, self.coords[2], self.coords[3], fill=Block.EDGE_FILL)
+        edge_n = canvas.create_rectangle(canvas.coords(self.base)[0], canvas.coords(self.base)[1], canvas.coords(self.base)[2], canvas.coords(self.base)[1] + Block.EDGE_SIZE, fill=Block.EDGE_FILL)
+        edge_s = canvas.create_rectangle(canvas.coords(self.base)[0], canvas.coords(self.base)[3] - Block.EDGE_SIZE, canvas.coords(self.base)[2], canvas.coords(self.base)[3], fill=Block.EDGE_FILL)
         canvas.tag_bind(edge_n, '<Button 1>', self.select)
         canvas.tag_bind(edge_n, '<B1-Motion>', lambda event: self.resize(event, dir='vertical'))
         canvas.tag_bind(edge_s, '<Button 1>', self.select)
@@ -115,8 +116,8 @@ class Block:
         edges.append(edge_n)
         edges.append(edge_s)
         
-        edge_e = canvas.create_rectangle(self.coords[2] - Block.EDGE_SIZE, self.coords[1], self.coords[2], self.coords[3], fill=Block.EDGE_FILL)
-        edge_w = canvas.create_rectangle(self.coords[0], self.coords[1], self.coords[0] + Block.EDGE_SIZE, self.coords[3], fill=Block.EDGE_FILL)
+        edge_e = canvas.create_rectangle(canvas.coords(self.base)[2] - Block.EDGE_SIZE, canvas.coords(self.base)[1], canvas.coords(self.base)[2], canvas.coords(self.base)[3], fill=Block.EDGE_FILL)
+        edge_w = canvas.create_rectangle(canvas.coords(self.base)[0], canvas.coords(self.base)[1], canvas.coords(self.base)[0] + Block.EDGE_SIZE, canvas.coords(self.base)[3], fill=Block.EDGE_FILL)
         canvas.tag_bind(edge_e, '<Button 1>', self.select)
         canvas.tag_bind(edge_e, '<B1-Motion>', lambda event: self.resize(event, dir='horizontal'))
         canvas.tag_bind(edge_w, '<Button 1>', self.select)
