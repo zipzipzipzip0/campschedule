@@ -14,11 +14,12 @@ class Block:
 
     ### Constructor
     def __init__(self, x1, y1, x2, y2, fill='blue', draggable=True, resizable=True):
-        # Local vars
+        # Dictionary stores component id:coord pairs
         self.components = {}
 
-        self.base = canvas.create_rectangle(x1, y1, x2, y2, fill=fill)
-        self.components.append(self.base)
+        coords = [x1, y1, x2, y2]
+        self.base = canvas.create_rectangle(coords[0], coords[1], coords[2], coords[3], fill=fill)
+        self.components[self.base] = coords
         self.center = [canvas.coords(self.base)[0] + (canvas.coords(self.base)[2] - canvas.coords(self.base)[0]) / 2, canvas.coords(self.base)[1] + (canvas.coords(self.base)[3] - canvas.coords(self.base)[1]) / 2]
 
         # Handle draggable
@@ -28,9 +29,11 @@ class Block:
         # Handle resizable
         if resizable:
             self.create_resize()
+
+        print(self.components)
     
-    def store_component(self, component):
-        self.components[component]
+    # def store_component(self, component):
+    #     self.components[component]
     
     def update_params(self):
         self.center = canvas.coords(self.base)
@@ -46,7 +49,6 @@ class Block:
         start_x = event.x
         start_y = event.y
         selected = event.widget.find_closest(event.x, event.y)[0]
-        initial_coords = [canvas.coords(c).copy() for c in self.components]
 
     ### Handle a user dragging the mouse
     def drag(self, event):
@@ -55,13 +57,13 @@ class Block:
         dy = event.y - start_y
 
         if selected in self.components:
-            for c in range(0, len(self.components)):
-                coords = canvas.coords(self.components[c])
-                coords[0] = initial_coords[c][0] + dx
-                coords[1] = initial_coords[c][1] + dy
-                coords[2] = initial_coords[c][2] + dx
-                coords[3] = initial_coords[c][3] + dy
-                canvas.coords(self.components[c], coords)
+            for c, initial_coords in self.components.items():
+                coords = canvas.coords(c)
+                coords[0] = initial_coords[0] + dx
+                coords[1] = initial_coords[1] + dy
+                coords[2] = initial_coords[2] + dx
+                coords[3] = initial_coords[3] + dy
+                canvas.coords(c, coords)
         
         self.update_params()
 
@@ -89,44 +91,40 @@ class Block:
                 # West edge
                 pass
 
-    ### Create the base rectangle of the block
-    def create_base(self):
-        base = canvas.create_rectangle(canvas.coords(self.base)[0], canvas.coords(self.base)[1], canvas.coords(self.base)[2], canvas.coords(self.base)[3], fill=self.fill)
-        self.components.append(base)
-        return base
-
     ### Create the circle in the center that is used for dragging
     def create_drag(self):
-        circ = canvas.create_oval(self.center[0] - Block.CIRCLE_RADIUS, self.center[1] - Block.CIRCLE_RADIUS, self.center[0] + Block.CIRCLE_RADIUS, self.center[1] + Block.CIRCLE_RADIUS, fill=Block.CIRCLE_FILL)
-        self.components.append(circ)
+        coords = [self.center[0] - Block.CIRCLE_RADIUS, self.center[1] - Block.CIRCLE_RADIUS, self.center[0] + Block.CIRCLE_RADIUS, self.center[1] + Block.CIRCLE_RADIUS]
+        circ = canvas.create_oval(coords[0], coords[1], coords[2], coords[3], fill=Block.CIRCLE_FILL)
+        self.components[circ] = coords
 
         canvas.tag_bind(circ, '<Button 1>', self.select)
         canvas.tag_bind(circ, '<B1-Motion>', self.drag)
     
     ### Create the rectangles on the edges that are used for resizing
     def create_resize(self):
-        edges = []
-        
-        edge_n = canvas.create_rectangle(canvas.coords(self.base)[0], canvas.coords(self.base)[1], canvas.coords(self.base)[2], canvas.coords(self.base)[1] + Block.EDGE_SIZE, fill=Block.EDGE_FILL)
-        edge_s = canvas.create_rectangle(canvas.coords(self.base)[0], canvas.coords(self.base)[3] - Block.EDGE_SIZE, canvas.coords(self.base)[2], canvas.coords(self.base)[3], fill=Block.EDGE_FILL)
+        coords = [canvas.coords(self.base)[0], canvas.coords(self.base)[1], canvas.coords(self.base)[2], canvas.coords(self.base)[1] + Block.EDGE_SIZE]
+        edge_n = canvas.create_rectangle(coords[0], coords[1], coords[2], coords[3], fill=Block.EDGE_FILL)
         canvas.tag_bind(edge_n, '<Button 1>', self.select)
         canvas.tag_bind(edge_n, '<B1-Motion>', lambda event: self.resize(event, dir='vertical'))
+        self.components[edge_n] = coords
+
+        coords = [canvas.coords(self.base)[0], canvas.coords(self.base)[3] - Block.EDGE_SIZE, canvas.coords(self.base)[2], canvas.coords(self.base)[3]]
+        edge_s = canvas.create_rectangle(coords[0], coords[1], coords[2], coords[3], fill=Block.EDGE_FILL)
         canvas.tag_bind(edge_s, '<Button 1>', self.select)
         canvas.tag_bind(edge_s, '<B1-Motion>', lambda event: self.resize(event, dir='vertical'))
-        edges.append(edge_n)
-        edges.append(edge_s)
-        
-        edge_e = canvas.create_rectangle(canvas.coords(self.base)[2] - Block.EDGE_SIZE, canvas.coords(self.base)[1], canvas.coords(self.base)[2], canvas.coords(self.base)[3], fill=Block.EDGE_FILL)
-        edge_w = canvas.create_rectangle(canvas.coords(self.base)[0], canvas.coords(self.base)[1], canvas.coords(self.base)[0] + Block.EDGE_SIZE, canvas.coords(self.base)[3], fill=Block.EDGE_FILL)
+        self.components[edge_s] = coords
+
+        coords = [canvas.coords(self.base)[2] - Block.EDGE_SIZE, canvas.coords(self.base)[1], canvas.coords(self.base)[2], canvas.coords(self.base)[3]]
+        edge_e = canvas.create_rectangle(coords[0], coords[1], coords[2], coords[3], fill=Block.EDGE_FILL)
         canvas.tag_bind(edge_e, '<Button 1>', self.select)
         canvas.tag_bind(edge_e, '<B1-Motion>', lambda event: self.resize(event, dir='horizontal'))
+        self.components[edge_e] = coords
+
+        coords = [canvas.coords(self.base)[0], canvas.coords(self.base)[1], canvas.coords(self.base)[0] + Block.EDGE_SIZE, canvas.coords(self.base)[3]]
+        edge_w = canvas.create_rectangle(coords[0], coords[1], coords[2], coords[3], fill=Block.EDGE_FILL)
         canvas.tag_bind(edge_w, '<Button 1>', self.select)
         canvas.tag_bind(edge_w, '<B1-Motion>', lambda event: self.resize(event, dir='horizontal'))
-        edges.append(edge_e)
-        edges.append(edge_w)
-
-        for e in edges:
-            self.components.append(e)
+        self.components[edge_w] = coords
 
 block = Block(175, 175, 225, 225, draggable=True, resizable=True)
 
