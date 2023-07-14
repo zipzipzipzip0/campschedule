@@ -40,8 +40,13 @@ class Block:
         self.center = [canvas.coords(self.base)[0] + (canvas.coords(self.base)[2] - canvas.coords(self.base)[0]) / 2, canvas.coords(self.base)[1] + (canvas.coords(self.base)[3] - canvas.coords(self.base)[1]) / 2]
     
     ### Move a component
-    def move(self, component, d):
-        pass
+    def move(self, c, initial_coords, dx=0, dy=0):
+        coords = canvas.coords(c)
+        coords[0] = initial_coords[0] + dx
+        coords[1] = initial_coords[1] + dy
+        coords[2] = initial_coords[2] + dx
+        coords[3] = initial_coords[3] + dy
+        canvas.coords(c, coords)
 
     ### Select an object
     def select(self, event):
@@ -58,12 +63,7 @@ class Block:
 
         if selected in self.components:
             for c, initial_coords in self.components.items():
-                coords = canvas.coords(c)
-                coords[0] = initial_coords[0] + dx
-                coords[1] = initial_coords[1] + dy
-                coords[2] = initial_coords[2] + dx
-                coords[3] = initial_coords[3] + dy
-                canvas.coords(c, coords)
+                self.move(c, initial_coords, dx=dx, dy=dy)
         
         self.update_params()
 
