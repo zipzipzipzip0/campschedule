@@ -90,26 +90,35 @@ class Block:
         dy = event.y - start_y
 
         if selected in self.components:
-            if (dir == 'vertical') and (canvas.coords(selected)[3] < self.center[1] + Block.EDGE_SIZE):
+            if (dir == 'vertical') and (canvas.coords(selected)[3] < self.center[1] - Block.EDGE_SIZE):
                 # North edge
-                # Drag north edge
                 self.adjust(selected, self.components[selected], dx=0, dy=dy, dx2=0, dy2=dy)
-                # Extend base
                 self.adjust(self.base, self.components[self.base], dx=0, dy=dy, dx2=0, dy2=0)
-                # Extend east and west edges
                 for e in [self.edge_calc(0, d) for d in ['cw', 'ccw']]:
                     self.adjust(e, self.components[e], dx=0, dy=dy, dx2=0, dy2=0)
-                # Update center circle
                 self.adjust(self.circ, self.components[self.circ], dx=0, dy=dy/2, dx2=0, dy2=dy/2)
-            if (dir == 'vertical') and (canvas.coords(selected)[1] > self.center[1] - Block.EDGE_SIZE):
+            elif (dir == 'vertical') and (canvas.coords(selected)[1] > self.center[1] + Block.EDGE_SIZE):
                 # South edge
-                pass
-            if (dir == 'horizontal') and (canvas.coords(selected)[2] > self.center[0] - Block.EDGE_SIZE):
+                self.adjust(selected, self.components[selected], dx=0, dy=dy, dx2=0, dy2=dy)
+                self.adjust(self.base, self.components[self.base], dx=0, dy=0, dx2=0, dy2=dy)
+                for e in [self.edge_calc(2, d) for d in ['cw', 'ccw']]:
+                    self.adjust(e, self.components[e], dx=0, dy=0, dx2=0, dy2=dy)
+                self.adjust(self.circ, self.components[self.circ], dx=0, dy=dy/2, dx2=0, dy2=dy/2)
+            elif (dir == 'horizontal') and (canvas.coords(selected)[2] > self.center[0] + Block.EDGE_SIZE):
                 # East edge
-                pass
-            if (dir == 'horizontal') and (canvas.coords(selected)[0] < self.center[0] + Block.EDGE_SIZE):
+                self.adjust(selected, self.components[selected], dx=dx, dy=0, dx2=dx, dy2=0)
+                self.adjust(self.base, self.components[self.base], dx=0, dy=0, dx2=dx, dy2=0)
+                for e in [self.edge_calc(1, d) for d in ['cw', 'ccw']]:
+                    self.adjust(e, self.components[e], dx=0, dy=0, dx2=dx, dy2=0)
+                self.adjust(self.circ, self.components[self.circ], dx=dx/2, dy=0, dx2=dx/2, dy2=0)
+            elif (dir == 'horizontal') and (canvas.coords(selected)[0] < self.center[0] - Block.EDGE_SIZE):
                 # West edge
-                pass
+                self.adjust(selected, self.components[selected], dx=dx, dy=0, dx2=dx, dy2=0)
+                self.adjust(self.base, self.components[self.base], dx=dx, dy=0, dx2=0, dy2=0)
+                for e in [self.edge_calc(3, d) for d in ['cw', 'ccw']]:
+                    self.adjust(e, self.components[e], dx=dx, dy=0, dx2=0, dy2=0)
+                self.adjust(self.circ, self.components[self.circ], dx=dx/2, dy=0, dx2=dx/2, dy2=0)
+
 
     ### Create the circle in the center that is used for dragging
     def create_drag(self):
