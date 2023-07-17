@@ -172,6 +172,34 @@ class Block:
         self.components[edge_w] = coords
         self.edges[3] = edge_w
 
-block = Block(175, 175, 225, 225, draggable=True, resizable=True)
+class Grid:
+    ### Constructor
+    def __init__(self, x0, y0, x1, y1, rows, columns):
+        canvas.create_rectangle(x0, y0, x1, y1)
+
+        self.row_height = (y1 - y0) / rows
+        self.row_coords = [y0]
+        for r in range(1, rows):
+            y = y0 + r * self.row_height
+            self.row_coords.append(y)
+            canvas.create_line(x0, y, x1, y)
+        self.row_coords.append(y1)
+
+        self.column_width = (x1 - x0) / columns
+        self.column_coords = [x0]
+        for c in range(1, columns):
+            x = x0 + c * self.column_width
+            self.column_coords.append(x)
+            canvas.create_line(x, y0, x, y1)
+        self.column_coords.append(x1)
+    
+    def rows(self):
+        return self.row_coords
+    
+    def columns(self):
+        return self.column_coords
+
+#block = Block(175, 175, 225, 225, draggable=True, resizable=True)
+grid = Grid(100, 100, 300, 300, 6, 4)
 
 root.mainloop()
