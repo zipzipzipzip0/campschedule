@@ -7,8 +7,8 @@ canvas.pack()
 
 class Block:
     ### Constants
-    EDGE_SIZE = 5
-    EDGE_FILL = 'gray'
+    EDGE_SIZE = 2
+    EDGE_FILL = 'black'
     CIRCLE_RADIUS = 5
     CIRCLE_FILL = 'gray'
 
@@ -22,12 +22,16 @@ class Block:
 
         coords = [x1, y1, x2, y2]
         self.base = canvas.create_rectangle(coords[0], coords[1], coords[2], coords[3], fill=fill)
+        canvas.tag_bind(self.base, '<Button 1>', self.select)
+        canvas.tag_bind(self.base, '<B1-Motion>', self.drag)
+        canvas.tag_bind(self.base, '<ButtonRelease-1>', self.deselect)
+
         self.components[self.base] = coords
         self.center = [canvas.coords(self.base)[0] + (canvas.coords(self.base)[2] - canvas.coords(self.base)[0]) / 2, canvas.coords(self.base)[1] + (canvas.coords(self.base)[3] - canvas.coords(self.base)[1]) / 2]
 
-        # Handle draggable
-        if draggable:
-            self.circ = self.create_drag()
+        # # Handle draggable
+        # if draggable:
+        #     self.circ = self.create_drag()
 
         # Handle resizable
         if resizable:
@@ -49,9 +53,9 @@ class Block:
 
     ### Move/resize a component by changing its coordinates
     def adjust(self, c, initial_coords, dx=0, dy=0, dx2=None, dy2=None):
-        if dx2 == None:
+        if dx2 is None:
             dx2 = dx
-        if dy2 == None:
+        if dy2 is None:
             dy2 = dy
         coords = canvas.coords(c)
         coords[0] = initial_coords[0] + dx
@@ -94,45 +98,45 @@ class Block:
                 # North edge
                 self.adjust(selected, self.components[selected], dx=0, dy=dy, dx2=0, dy2=dy)
                 self.adjust(self.base, self.components[self.base], dx=0, dy=dy, dx2=0, dy2=0)
-                for e in [self.edge_calc(0, d) for d in ['cw', 'ccw']]:
+                for e in [edge for edge in [self.edge_calc(0, d) for d in ['cw', 'ccw']] if edge is not None]:
                     self.adjust(e, self.components[e], dx=0, dy=dy, dx2=0, dy2=0)
-                self.adjust(self.circ, self.components[self.circ], dx=0, dy=dy/2, dx2=0, dy2=dy/2)
+                #self.adjust(self.circ, self.components[self.circ], dx=0, dy=dy/2, dx2=0, dy2=dy/2)
             elif (dir == 'vertical') and (canvas.coords(selected)[1] > self.center[1] + Block.EDGE_SIZE):
                 # South edge
                 self.adjust(selected, self.components[selected], dx=0, dy=dy, dx2=0, dy2=dy)
                 self.adjust(self.base, self.components[self.base], dx=0, dy=0, dx2=0, dy2=dy)
-                for e in [self.edge_calc(2, d) for d in ['cw', 'ccw']]:
+                for e in [edge for edge in [self.edge_calc(2, d) for d in ['cw', 'ccw']] if edge is not None]:
                     self.adjust(e, self.components[e], dx=0, dy=0, dx2=0, dy2=dy)
-                self.adjust(self.circ, self.components[self.circ], dx=0, dy=dy/2, dx2=0, dy2=dy/2)
+                #self.adjust(self.circ, self.components[self.circ], dx=0, dy=dy/2, dx2=0, dy2=dy/2)
             elif (dir == 'horizontal') and (canvas.coords(selected)[2] > self.center[0] + Block.EDGE_SIZE):
                 # East edge
                 self.adjust(selected, self.components[selected], dx=dx, dy=0, dx2=dx, dy2=0)
                 self.adjust(self.base, self.components[self.base], dx=0, dy=0, dx2=dx, dy2=0)
-                for e in [self.edge_calc(1, d) for d in ['cw', 'ccw']]:
+                for e in [edge for edge in [self.edge_calc(1, d) for d in ['cw', 'ccw']] if edge is not None]:
                     self.adjust(e, self.components[e], dx=0, dy=0, dx2=dx, dy2=0)
-                self.adjust(self.circ, self.components[self.circ], dx=dx/2, dy=0, dx2=dx/2, dy2=0)
+                #self.adjust(self.circ, self.components[self.circ], dx=dx/2, dy=0, dx2=dx/2, dy2=0)
             elif (dir == 'horizontal') and (canvas.coords(selected)[0] < self.center[0] - Block.EDGE_SIZE):
                 # West edge
                 self.adjust(selected, self.components[selected], dx=dx, dy=0, dx2=dx, dy2=0)
                 self.adjust(self.base, self.components[self.base], dx=dx, dy=0, dx2=0, dy2=0)
-                for e in [self.edge_calc(3, d) for d in ['cw', 'ccw']]:
+                for e in [edge for edge in [self.edge_calc(3, d) for d in ['cw', 'ccw']] if edge is not None]:
                     self.adjust(e, self.components[e], dx=dx, dy=0, dx2=0, dy2=0)
-                self.adjust(self.circ, self.components[self.circ], dx=dx/2, dy=0, dx2=dx/2, dy2=0)
-
+                #self.adjust(self.circ, self.components[self.circ], dx=dx/2, dy=0, dx2=dx/2, dy2=0)
 
     ### Create the circle in the center that is used for dragging
-    def create_drag(self):
-        coords = [self.center[0] - Block.CIRCLE_RADIUS, self.center[1] - Block.CIRCLE_RADIUS, self.center[0] + Block.CIRCLE_RADIUS, self.center[1] + Block.CIRCLE_RADIUS]
-        circ = canvas.create_oval(coords[0], coords[1], coords[2], coords[3], fill=Block.CIRCLE_FILL)
-        self.components[circ] = coords
+    # def create_drag(self):
+    #     coords = [self.center[0] - Block.CIRCLE_RADIUS, self.center[1] - Block.CIRCLE_RADIUS, self.center[0] + Block.CIRCLE_RADIUS, self.center[1] + Block.CIRCLE_RADIUS]
+    #     circ = canvas.create_oval(coords[0], coords[1], coords[2], coords[3], fill=Block.CIRCLE_FILL)
+    #     self.components[circ] = coords
 
-        canvas.tag_bind(circ, '<Button 1>', self.select)
-        canvas.tag_bind(circ, '<B1-Motion>', self.drag)
-        canvas.tag_bind(circ, '<ButtonRelease-1>', self.deselect)
-        return circ
+    #     canvas.tag_bind(circ, '<Button 1>', self.select)
+    #     canvas.tag_bind(circ, '<B1-Motion>', self.drag)
+    #     canvas.tag_bind(circ, '<ButtonRelease-1>', self.deselect)
+    #     return circ
     
     ### Create the rectangles on the edges that are used for resizing
     def create_resize(self):
+        # North edge
         coords = [canvas.coords(self.base)[0], canvas.coords(self.base)[1], canvas.coords(self.base)[2], canvas.coords(self.base)[1] + Block.EDGE_SIZE]
         edge_n = canvas.create_rectangle(coords[0], coords[1], coords[2], coords[3], fill=Block.EDGE_FILL)
         canvas.tag_bind(edge_n, '<Button 1>', self.select)
@@ -141,6 +145,7 @@ class Block:
         self.components[edge_n] = coords
         self.edges[0] = edge_n
 
+        # South edge
         coords = [canvas.coords(self.base)[0], canvas.coords(self.base)[3] - Block.EDGE_SIZE, canvas.coords(self.base)[2], canvas.coords(self.base)[3]]
         edge_s = canvas.create_rectangle(coords[0], coords[1], coords[2], coords[3], fill=Block.EDGE_FILL)
         canvas.tag_bind(edge_s, '<Button 1>', self.select)
@@ -149,6 +154,7 @@ class Block:
         self.components[edge_s] = coords
         self.edges[2] = edge_s
 
+        # East edge
         coords = [canvas.coords(self.base)[2] - Block.EDGE_SIZE, canvas.coords(self.base)[1], canvas.coords(self.base)[2], canvas.coords(self.base)[3]]
         edge_e = canvas.create_rectangle(coords[0], coords[1], coords[2], coords[3], fill=Block.EDGE_FILL)
         canvas.tag_bind(edge_e, '<Button 1>', self.select)
@@ -157,6 +163,7 @@ class Block:
         self.components[edge_e] = coords
         self.edges[1] = edge_e
 
+        # West edge
         coords = [canvas.coords(self.base)[0], canvas.coords(self.base)[1], canvas.coords(self.base)[0] + Block.EDGE_SIZE, canvas.coords(self.base)[3]]
         edge_w = canvas.create_rectangle(coords[0], coords[1], coords[2], coords[3], fill=Block.EDGE_FILL)
         canvas.tag_bind(edge_w, '<Button 1>', self.select)
