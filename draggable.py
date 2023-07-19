@@ -13,14 +13,14 @@ class Block:
     CIRCLE_FILL = 'gray'
 
     ### Constructor
-    def __init__(self, x1, y1, x2, y2, fill='blue', draggable=True, resizable=True):
+    def __init__(self, x0, y0, x1, y1, fill='blue', draggable=True, resizable=True):
         # Dictionary stores component id:coord pairs
         self.components = {}
 
         # List stores only ids of edges for edge calculations
         self.edges = [None] * 4
 
-        coords = [x1, y1, x2, y2]
+        coords = [x0, y0, x1, y1]
         self.base = canvas.create_rectangle(coords[0], coords[1], coords[2], coords[3], fill=fill)
         canvas.tag_bind(self.base, '<Button 1>', self.select)
         canvas.tag_bind(self.base, '<B1-Motion>', self.drag)
@@ -177,6 +177,7 @@ class Grid:
     def __init__(self, x0, y0, x1, y1, rows, columns):
         canvas.create_rectangle(x0, y0, x1, y1)
 
+        self.rows = rows
         self.row_height = (y1 - y0) / rows
         self.row_coords = [y0]
         for r in range(1, rows):
@@ -185,6 +186,7 @@ class Grid:
             canvas.create_line(x0, y, x1, y)
         self.row_coords.append(y1)
 
+        self.columns = columns
         self.column_width = (x1 - x0) / columns
         self.column_coords = [x0]
         for c in range(1, columns):
@@ -193,13 +195,60 @@ class Grid:
             canvas.create_line(x, y0, x, y1)
         self.column_coords.append(x1)
     
-    def rows(self):
-        return self.row_coords
+class Snappable(Block):
+    SNAP_RANGE = 5
+
+    def __init__(self, grid, x0, y0, x1, y1, fill='blue', draggable=True, resizable=True):
+        self.grid = grid
+        self.x0, self.y0, self.x1, self.y1 = x0, y0, x1, y1
+        super().__init__(self.grid.column_coords[x0], self.grid.row_coords[y0], self.grid.column_coords[x1], self.grid.row_coords[y1], fill=fill, draggable=draggable, resizable=resizable)
     
-    def columns(self):
-        return self.column_coords
+    ### Handle the user resizing an object
+    def resize(self, event, dir):
+        global start_x, start_y, selected, initial_coords
+        dx = 0
+        dy = 0
+        if (self.x0 > 0) and (event.x < self.grid.column_coords[self.x0-1] + Snappable.SNAP_RANGE):
+            dx = self.grid.column_coords[self.x0-1] - self.grid.column_coords[self.x0]
+        elif (self.x1 < self.grid.columns) and (event.x > self.grid.column_coords[self.x1+1] - Snappable.SNAP_RANGE):
+            dx = self.grid.column_coords[self.x1+1] - self.grid.column_coords[self.x1]
+        elif (self.y0 > 0) and (event.y < self.grid.row_coords[self.y0-1] + Snappable.SNAP_RANGE):
+            dy = self.grid.row_coords[self.y0-1] - self.grid.row_coords[self.y0]
+        elif (self.y1 < self.grid.rows) and (event.y > self.grid.row_coords[self.y1+1] - Snappable.SNAP_RANGE):
+            dy = self.grid.row_coords[self.y1+1] - self.grid.row_coords[self.y1]
+        
+        if selected in self.components:
+            if (dir == 'vertical') and (canvas.coords(selected)[3] < self.center[1] - Block.EDGE_SIZE):
+                # North edge
+                self.adjust(selected, self.components[selected], dx=0, dy=dy, dx2=0, dy2=dy)
+                self.adjust(self.base, self.components[self.base], dx=0, dy=dy, dx2=0, dy2=0)
+                for e in [edge for edge in [self.edge_calc(0, d) for d in ['cw', 'ccw']] if edge is not None]:
+                    self.adjust(e, self.components[e], dx=0, dy=dy, dx2=0, dy2=0)
+                #self.adjust(self.circ, self.components[self.circ], dx=0, dy=dy/2, dx2=0, dy2=dy/2)
+            elif (dir == 'vertical') and (canvas.coords(selected)[1] > self.center[1] + Block.EDGE_SIZE):
+                # South edge
+                self.adjust(selected, self.components[selected], dx=0, dy=dy, dx2=0, dy2=dy)
+                self.adjust(self.base, self.components[self.base], dx=0, dy=0, dx2=0, dy2=dy)
+                for e in [edge for edge in [self.edge_calc(2, d) for d in ['cw', 'ccw']] if edge is not None]:
+                    self.adjust(e, self.components[e], dx=0, dy=0, dx2=0, dy2=dy)
+                #self.adjust(self.circ, self.components[self.circ], dx=0, dy=dy/2, dx2=0, dy2=dy/2)
+            elif (dir == 'horizontal') and (canvas.coords(selected)[2] > self.center[0] + Block.EDGE_SIZE):
+                # East edge
+                self.adjust(selected, self.components[selected], dx=dx, dy=0, dx2=dx, dy2=0)
+                self.adjust(self.base, self.components[self.base], dx=0, dy=0, dx2=dx, dy2=0)
+                for e in [edge for edge in [self.edge_calc(1, d) for d in ['cw', 'ccw']] if edge is not None]:
+                    self.adjust(e, self.components[e], dx=0, dy=0, dx2=dx, dy2=0)
+                #self.adjust(self.circ, self.components[self.circ], dx=dx/2, dy=0, dx2=dx/2, dy2=0)
+            elif (dir == 'horizontal') and (canvas.coords(selected)[0] < self.center[0] - Block.EDGE_SIZE):
+                # West edge
+                self.adjust(selected, self.components[selected], dx=dx, dy=0, dx2=dx, dy2=0)
+                self.adjust(self.base, self.components[self.base], dx=dx, dy=0, dx2=0, dy2=0)
+                for e in [edge for edge in [self.edge_calc(3, d) for d in ['cw', 'ccw']] if edge is not None]:
+                    self.adjust(e, self.components[e], dx=dx, dy=0, dx2=0, dy2=0)
+                #self.adjust(self.circ, self.components[self.circ], dx=dx/2, dy=0, dx2=dx/2, dy2=0)
 
 #block = Block(175, 175, 225, 225, draggable=True, resizable=True)
 grid = Grid(100, 100, 300, 300, 6, 4)
+snap = Snappable(grid, 1, 1, 2, 2)
 
 root.mainloop()
