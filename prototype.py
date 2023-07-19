@@ -95,21 +95,13 @@ class Grid(tk.Canvas):
         self.columns -= c
         self.draw_grid()
 
-    def add_element(self, element, x0, y0, x1=None, y1=None, padx=1, pady=1, alignment='nw'):
-        if x1 is None:
-            x1 = x0
-        if y1 is None:
-            y1 = y0
-        if not (all(c in range(0, self.rows) for c in [y0, y1]) and all(c in range(0, self.columns) for c in [x0, x1])):
+    def add_element(self, element, x, y, padx=1, pady=1, alignment='nw'):
+        if not ((x in range(0, self.columns)) and (y in range(0, self.rows))):
             raise KeyError("Not in grid.")
-        if not ((x0 <= x1) and (y0 <= y1)):
-            raise ValueError("Invalid key arguments.")
         new_element = {'element' : element,
                        'id' : element.winfo_id(),
-                       'x0' : x0,
-                       'y0' : y0,
-                       'x1' : x1,
-                       'y1' : y1,
+                       'x' : x,
+                       'y' : y,
                        'padx' : padx,
                        'pady' : pady,
                        'alignment' : alignment}
@@ -144,12 +136,12 @@ class Grid(tk.Canvas):
     def calculate_element_coords(self, e):
         row_coords = [0] + self.row_coords + [self.height]
         column_coords = [0] + self.column_coords + [self.width]
-        row_height = row_coords[e['x0']+1] - row_coords[e['x0']]
-        column_width = column_coords[e['y0']+1] - column_coords[e['y0']]
+        row_height = row_coords[e['x']+1] - row_coords[e['x']]
+        column_width = column_coords[e['y']+1] - column_coords[e['y']]
         w = e['element'].winfo_reqwidth()
         h = e['element'].winfo_reqheight()
-        x_coords = [column_coords[e['x0']] + e['padx'], column_coords[e['x0']] + column_width/2 - w/2, column_coords[e['x0']+1] - e['padx']]
-        y_coords = [row_coords[e['y0']] + e['pady'], row_coords[e['y0']] + row_height/2 - h/2, row_coords[e['y0']+1] - e['pady']]
+        x_coords = [column_coords[e['x']] + e['padx'], column_coords[e['x']] + column_width/2 - w/2, column_coords[e['x']+1] - e['padx']]
+        y_coords = [row_coords[e['y']] + e['pady'], row_coords[e['y']] + row_height/2 - h/2, row_coords[e['y']+1] - e['pady']]
         if e['alignment'] == 'nw':
             x = 0
             y = 0
@@ -257,7 +249,7 @@ def test():
     grid.pack()
 
     label = tk.Label(grid, text="test")
-    grid.add_element(label, x0=1, y0=1, alignment='c')
+    grid.add_element(label, 1, 1, alignment='c')
 
     b1 = tk.Button(root, text="Add Row", command=grid.add_row)
     b1.grid(row=0, column=0)
