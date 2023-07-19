@@ -19,6 +19,7 @@ class Grid(tk.Canvas):
         self.locked_columns = []
 
         self.gridlines = []
+        self.elements = []
 
         self.line_color = line_color
 
@@ -94,19 +95,34 @@ class Grid(tk.Canvas):
         self.columns -= c
         self.draw_grid()
 
-    def grid_place(self, element, gx, gy, padx=0, pady=0, alignment='nw'):
-        if (gy >= self.rows) or (gx >= self.columns):
-            raise KeyError
-        row_coords = [0] + self.row_coords + [self.height]
-        column_coords = [0] + self.column_coords + [self.width]
-
-        # TODO: Make placement options other than 'nw'
-        x = column_coords[gx] + padx
-        y = row_coords[gy] + pady
+    def add_element(self, element, x0, y0, x1=None, y1=None, padx=1, pady=1, alignment='nw'):
+        if x1 is None:
+            x1 = x0
+        if y1 is None:
+            y1 = y0
+        if not (all(c in range(0, self.rows) for c in [y0, y1]) and all(c in range(0, self.columns) for c in [x0, x1])):
+            raise KeyError("Not in grid.")
+        if not ((x0 <= x1) and (y0 <= y1)):
+            raise ValueError("Invalid key arguments.")
+        new_element = {'element' : element,
+                       'id' : element.winfo_id(),
+                       'x0' : x0,
+                       'y0' : y0,
+                       'x1' : x1,
+                       'y1' : y1,
+                       'padx' : padx,
+                       'pady' : pady,
+                       'alignment' : alignment}
+        self.elements.append(new_element) # TODO: Use a dictionary for easy reference when a user wants to edit an element
+        self.draw_grid()
 
     def draw_grid(self, event=None):
         self.update_column_coords()
         self.update_row_coords()
+        self.draw_gridlines()
+        self.draw_elements()
+
+    def draw_gridlines(self):
         for g in self.gridlines:
             self.delete(g)
         for r in self.row_coords:
@@ -115,6 +131,56 @@ class Grid(tk.Canvas):
         for c in self.column_coords:
             column = self.create_line(c, 0, c, self.height, width=Grid.LINE_WIDTH, fill=self.line_color)
             self.gridlines.append(column)
+
+    def draw_elements(self):
+        for e in self.elements:
+            self.delete(e['id'])
+        for e in self.elements:
+            if type(e['element']) == type(tk.Label()):
+                coords = self.calculate_element_coords(e)
+                #print(f'x = {coords[0]}\ny = {coords[1]}')
+                e['element'].place(x=coords[0]+e['padx'], y=coords[1]+e['pady'])
+
+    def calculate_element_coords(self, e):
+        row_coords = [0] + self.row_coords + [self.height]
+        column_coords = [0] + self.column_coords + [self.width]
+        row_height = row_coords[e['x0']+1] - row_coords[e['x0']]
+        column_width = column_coords[e['y0']+1] - column_coords[e['y0']]
+        w = e['element'].winfo_reqwidth()
+        h = e['element'].winfo_reqheight()
+        x_coords = [column_coords[e['x0']] + e['padx'], column_coords[e['x0']] + column_width/2 - w/2, column_coords[e['x0']+1] - e['padx']]
+        y_coords = [row_coords[e['y0']] + e['pady'], row_coords[e['y0']] + row_height/2 - h/2, row_coords[e['y0']+1] - e['pady']]
+        if e['alignment'] == 'nw':
+            x = 0
+            y = 0
+        elif e['alignment'] == 'w':
+            x = 0
+            y = 1
+        elif e['alignment'] == 'sw':
+            x = 0
+            y = 2
+        elif e['alignment'] == 'n':
+            x = 1
+            y = 0
+        elif e['alignment'] == 'c':
+            x = 1
+            y = 1
+        elif e['alignment'] == 's':
+            x = 1
+            y = 2
+        elif e['alignment'] == 'ne':
+            x = 2
+            y = 0
+        elif e['alignment'] == 'e':
+            x = 2
+            y = 1
+        elif e['alignment'] == 'se':
+            x = 2
+            y = 2
+        else:
+            raise ValueError("Invalid alignment")
+        return [x_coords[x], y_coords[y]]
+
 class Schedule(tk.Tk):
     TITLE = 'Pool & Playground Schedule'
     FRAME_COLOR = 'lightblue'
@@ -189,6 +255,9 @@ def test():
 
     grid = Grid(frame, 5, 5)
     grid.pack()
+
+    label = tk.Label(grid, text="test")
+    grid.add_element(label, x0=1, y0=1, alignment='c')
 
     b1 = tk.Button(root, text="Add Row", command=grid.add_row)
     b1.grid(row=0, column=0)
