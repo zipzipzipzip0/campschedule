@@ -18,6 +18,8 @@ class Grid(tk.Canvas):
         self.column_coords = []
         self.locked_columns = []
 
+        self.gridlines = []
+
         self.line_color = line_color
 
         self.bind('<Configure>', self.draw_grid)
@@ -72,13 +74,47 @@ class Grid(tk.Canvas):
             self.locked_columns.pop()
             self.draw_grid()
 
+    def add_row(self, r=1):
+        self.rows += r
+        self.draw_grid()
+
+    def add_column(self, c=1):
+        self.columns += c
+        self.draw_grid()
+
+    def del_row(self, r=1):
+        if r >= self.rows:
+            raise ValueError("Grid requires at least one row.")
+        self.rows -= r
+        self.draw_grid()
+
+    def del_column(self, c=1):
+        if c >= self.columns:
+            raise ValueError("Grid requires at least one column.")
+        self.columns -= c
+        self.draw_grid()
+
+    def grid_place(self, element, gx, gy, padx=0, pady=0, alignment='nw'):
+        if (gy >= self.rows) or (gx >= self.columns):
+            raise KeyError
+        row_coords = [0] + self.row_coords + [self.height]
+        column_coords = [0] + self.column_coords + [self.width]
+
+        # TODO: Make placement options other than 'nw'
+        x = column_coords[gx] + padx
+        y = row_coords[gy] + pady
+
     def draw_grid(self, event=None):
         self.update_column_coords()
         self.update_row_coords()
+        for g in self.gridlines:
+            self.delete(g)
         for r in self.row_coords:
-            self.create_line(0, r, self.width, r, width=Grid.LINE_WIDTH, fill=self.line_color)
+            row = self.create_line(0, r, self.width, r, width=Grid.LINE_WIDTH, fill=self.line_color)
+            self.gridlines.append(row)
         for c in self.column_coords:
-            self.create_line(c, 0, c, self.height, width=Grid.LINE_WIDTH, fill=self.line_color)
+            column = self.create_line(c, 0, c, self.height, width=Grid.LINE_WIDTH, fill=self.line_color)
+            self.gridlines.append(column)
 class Schedule(tk.Tk):
     TITLE = 'Pool & Playground Schedule'
     FRAME_COLOR = 'lightblue'
@@ -152,8 +188,16 @@ def test():
     frame.place(x=100, y=100, width=200, height=200)
 
     grid = Grid(frame, 5, 5)
-    grid.lock_row(100)
     grid.pack()
+
+    b1 = tk.Button(root, text="Add Row", command=grid.add_row)
+    b1.grid(row=0, column=0)
+    b2 = tk.Button(root, text="Add Column", command=grid.add_column)
+    b2.grid(row=0, column=1)
+    b3 = tk.Button(root, text="Delete Row", command=grid.del_row)
+    b3.grid(row=0, column=2)
+    b4 = tk.Button(root, text="Delete Column", command=grid.del_column)
+    b4.grid(row=0, column=3)
 
     root.mainloop()
 
