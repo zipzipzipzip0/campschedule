@@ -109,7 +109,7 @@ class Grid(tk.Canvas):
         self.elements.append(new_element) # TODO: Use a dictionary for easy reference when a user wants to edit an element
         self.draw_grid()
 
-    def add_shape(self, shape, x0, y0, x1=None, y1=None, fill='gray'):
+    def add_shape(self, shape, x0, y0, x1=None, y1=None, fill='gray', outline=('black', 2)):
         if x1 is None:
             x1 = x0
         if y1 is None:
@@ -121,7 +121,7 @@ class Grid(tk.Canvas):
         
         s = None
         if shape == 'rectangle':
-            s = self.create_rectangle(0, 0, 0, 0, fill=fill)
+            s = self.create_rectangle(0, 0, 0, 0, fill=fill, outline=outline[0], width=outline[1])
         self.shapes[s] = {'shape' : shape,
                           'x0' : x0,
                           'y0' : y0,
