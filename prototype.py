@@ -20,6 +20,7 @@ class Grid(tk.Canvas):
 
         self.gridlines = []
         self.elements = []
+        self.shapes = {}
 
         self.line_color = line_color
 
@@ -108,11 +109,36 @@ class Grid(tk.Canvas):
         self.elements.append(new_element) # TODO: Use a dictionary for easy reference when a user wants to edit an element
         self.draw_grid()
 
+    def add_shape(self, shape, x0, y0, x1=None, y1=None, fill='gray'):
+        if x1 is None:
+            x1 = x0
+        if y1 is None:
+            y1 = y0
+        if not (all(c in range(0, self.rows) for c in [y0, y1]) and all(c in range(0, self.columns) for c in [x0, x1])):
+            raise KeyError("Not in grid.")
+        if not ((x0 <= x1) and (y0 <= y1)):
+            raise ValueError("Invalid key arguments.")
+        
+        s = None
+        if shape == 'rectangle':
+            s = self.create_rectangle(0, 0, 0, 0, fill=fill)
+        self.shapes[s] = {'shape' : shape,
+                          'x0' : x0,
+                          'y0' : y0,
+                          'x1' : x1,
+                          'y1' : y1}
+        #print(self.shapes)
+        self.draw_grid()
+
     def draw_grid(self, event=None):
         self.update_column_coords()
         self.update_row_coords()
         self.draw_gridlines()
+        #print("Gridlines:\t", self.find_all())
         self.draw_elements()
+        #print("Elements:\t", self.find_all())
+        self.draw_shapes()
+        #print("Shapes:\t\t", self.find_all())
 
     def draw_gridlines(self):
         for g in self.gridlines:
@@ -129,9 +155,15 @@ class Grid(tk.Canvas):
             self.delete(e['id'])
         for e in self.elements:
             if type(e['element']) == type(tk.Label()):
-                coords = self.calculate_element_coords(e)
+                x, y = self.calculate_element_coords(e)
                 #print(f'x = {coords[0]}\ny = {coords[1]}')
-                e['element'].place(x=coords[0]+e['padx'], y=coords[1]+e['pady'])
+                e['element'].place(x=x, y=y)
+
+    def draw_shapes(self):
+        # No need to delete/remake old shapes, just resize them
+        for key, s in self.shapes.items():
+            x0, y0, x1, y1 = self.calculate_shape_coords(s)
+            self.coords(key, x0, y0, x1, y1)
 
     def calculate_element_coords(self, e):
         row_coords = [0] + self.row_coords + [self.height]
@@ -171,7 +203,17 @@ class Grid(tk.Canvas):
             y = 2
         else:
             raise ValueError("Invalid alignment")
-        return [x_coords[x], y_coords[y]]
+        return x_coords[x], y_coords[y]
+
+    def calculate_shape_coords(self, s):
+        row_coords = [0] + self.row_coords + [self.height]
+        column_coords = [0] + self.column_coords + [self.width]
+        x0 = column_coords[s['x0']]
+        y0 = row_coords[s['y0']]
+        x1 = column_coords[s['x1']+1]
+        y1 = row_coords[s['y1']+1]
+        #print(x0, y0, x1, y1)
+        return x0, y0, x1, y1
 
 class Schedule(tk.Tk):
     TITLE = 'Pool & Playground Schedule'
@@ -248,8 +290,12 @@ def test():
     grid = Grid(frame, 5, 5)
     grid.pack()
 
+    print("Making Label...")
     label = tk.Label(grid, text="test")
     grid.add_element(label, 1, 1, alignment='c')
+
+    print("Making Rectangle...")
+    grid.add_shape('rectangle', 1, 0, 2, 0)
 
     b1 = tk.Button(root, text="Add Row", command=grid.add_row)
     b1.grid(row=0, column=0)
