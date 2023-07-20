@@ -19,7 +19,7 @@ class Grid(tk.Canvas):
         self.locked_columns = []
 
         self.gridlines = []
-        self.elements = []
+        self.elements = {}
         self.shapes = {}
 
         self.line_color = line_color
@@ -106,7 +106,8 @@ class Grid(tk.Canvas):
                        'padx' : padx,
                        'pady' : pady,
                        'alignment' : alignment}
-        self.elements.append(new_element) # TODO: Use a dictionary for easy reference when a user wants to edit an element
+        #self.elements.append(new_element) # TODO: Use a dictionary for easy reference when a user wants to edit an element
+        self.elements[element] = new_element
         self.draw_grid()
 
     def add_shape(self, shape, x0, y0, x1=None, y1=None, fill='gray', outline=('black', 2)):
@@ -149,11 +150,13 @@ class Grid(tk.Canvas):
         for c in self.column_coords:
             column = self.create_line(c, 0, c, self.height, width=Grid.LINE_WIDTH, fill=self.line_color)
             self.gridlines.append(column)
+        cb = 1 + Grid.LINE_WIDTH
+        self.create_rectangle(cb, cb, self.width-cb, self.height-cb, outline=self.line_color, width=Grid.LINE_WIDTH)
 
     def draw_elements(self):
-        for e in self.elements:
+        for e in self.elements.values():
             self.delete(e['id'])
-        for e in self.elements:
+        for e in self.elements.values():
             if type(e['element']) == type(tk.Label()):
                 x, y = self.calculate_element_coords(e)
                 #print(f'x = {coords[0]}\ny = {coords[1]}')
