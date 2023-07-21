@@ -2,8 +2,36 @@ import tkinter as tk
 import datetime as dt
 
 class Grid(tk.Canvas):
+    """
+    A custom tkinter Canvas widget that displays a grid with elements and shapes.
+
+    Parameters:
+        parent (tk.Tk or tk.Toplevel): The parent widget.
+        rows (int): The number of rows in the grid.
+        columns (int): The number of columns in the grid.
+        line_color (str, optional): The color of the gridlines. Default is 'black'.
+        *args: Additional arguments to be passed to the superclass (tk.Canvas).
+        **kwargs: Additional keyword arguments to be passed to the superclass (tk.Canvas).
+
+    Author:
+        Aidan Stawasz
+    """
+    ### Constants ###
     LINE_WIDTH = 2
+
+    ### Constructor ###
     def __init__(self, parent, rows, columns, line_color='black', *args, **kwargs):
+        """
+        Initialize the Grid widget.
+
+        Parameters:
+            parent (tk.Tk or tk.Toplevel): The parent widget.
+            rows (int): The number of rows in the grid.
+            columns (int): The number of columns in the grid.
+            line_color (str, optional): The color of the gridlines. Default is 'black'.
+            *args: Additional arguments to be passed to the superclass (tk.Canvas).
+            **kwargs: Additional keyword arguments to be passed to the superclass (tk.Canvas).
+        """
         # Initialize canvas
         super().__init__(parent, *args, **kwargs)
         
@@ -26,7 +54,65 @@ class Grid(tk.Canvas):
 
         self.bind('<Configure>', self.draw_grid)
     
+    ### Draw the grid ###
+    def draw_grid(self, event=None):
+        """
+        Redraw the grid, gridlines, elements, and shapes when the canvas is resized.
+
+        Parameters:
+            event (tk.Event, optional): The event that triggered the grid redraw. Default is None.
+        """
+        self.update_column_coords()
+        self.update_row_coords()
+        self.draw_gridlines()
+        #print("Gridlines:\t", self.find_all())
+        self.draw_elements()
+        #print("Elements:\t", self.find_all())
+        self.draw_shapes()
+        #print("Shapes:\t\t", self.find_all())
+
+    def draw_gridlines(self):
+        """
+        Draw the gridlines and border of the grid.
+        """
+        for g in self.gridlines:
+            self.delete(g)
+        for r in self.row_coords:
+            row = self.create_line(0, r, self.width, r, width=Grid.LINE_WIDTH, fill=self.line_color)
+            self.gridlines.append(row)
+        for c in self.column_coords:
+            column = self.create_line(c, 0, c, self.height, width=Grid.LINE_WIDTH, fill=self.line_color)
+            self.gridlines.append(column)
+        cb = 1 + Grid.LINE_WIDTH
+        border = self.create_rectangle(cb, cb, self.width-cb, self.height-cb, outline=self.line_color, width=Grid.LINE_WIDTH)
+        self.gridlines.append(border)
+
+    def draw_elements(self):
+        """
+        Draw the elements in the grid at their respective positions.
+        """
+        for e in self.elements.values():
+            self.delete(e['id'])
+        for e in self.elements.values():
+            if type(e['element']) == type(tk.Label()):
+                x, y = self.calculate_element_coords(e)
+                #print(f'x = {coords[0]}\ny = {coords[1]}')
+                e['element'].place(x=x, y=y)
+
+    def draw_shapes(self):
+        """
+        Draw the shapes on the grid.
+        """
+        # No need to delete/remake old shapes, just resize them
+        for key, s in self.shapes.items():
+            x0, y0, x1, y1 = self.calculate_shape_coords(s)
+            self.coords(key, x0, y0, x1, y1)
+
+    ### Calculating coordinates ###
     def update_row_coords(self):
+        """
+        Update the y-coordinates of the rows in the grid.
+        """
         self.height = self.winfo_height()
         self.row_coords = []
         y0 = sum(self.locked_rows)
@@ -38,6 +124,9 @@ class Grid(tk.Canvas):
                 self.row_coords.append(y)
     
     def update_column_coords(self):
+        """
+        Update the x-coordinates of the columns in the grid.
+        """
         self.width = self.winfo_width()
         self.column_coords = []
         x0 = sum(self.locked_columns)
@@ -48,127 +137,16 @@ class Grid(tk.Canvas):
                 x = x0 + (c - len(self.locked_columns) + 1) * ((self.width - x0) / (self.columns - len(self.locked_columns)))
                 self.column_coords.append(x)
 
-    def lock_row(self, h, row=None):
-        if (row is not None) and (row >= len(self.locked_rows)):
-            raise KeyError
-        elif (row is not None) and (row < len(self.locked_rows)):
-            self.locked_rows[row] = h
-        else:
-            self.locked_rows.append(h)
-        self.draw_grid()
-    
-    def lock_column(self, w, column=None):
-        if (column is not None) and (column >= len(self.locked_columns)):
-            raise KeyError
-        elif (column is not None) and (column < len(self.locked_rows)):
-            self.locked_columns[column] = w
-        else:
-            self.locked_columns.append(w)
-        self.draw_grid()
-
-    def unlock_row(self):
-        if len(self.locked_rows) > 0:
-            self.locked_rows.pop()
-            self.draw_grid()
-
-    def unlock_column(self):
-        if len(self.locked_columns) > 0:
-            self.locked_columns.pop()
-            self.draw_grid()
-
-    def add_row(self, r=1):
-        self.rows += r
-        self.draw_grid()
-
-    def add_column(self, c=1):
-        self.columns += c
-        self.draw_grid()
-
-    def del_row(self, r=1):
-        if r >= self.rows:
-            raise ValueError("Grid requires at least one row.")
-        self.rows -= r
-        self.draw_grid()
-
-    def del_column(self, c=1):
-        if c >= self.columns:
-            raise ValueError("Grid requires at least one column.")
-        self.columns -= c
-        self.draw_grid()
-
-    def add_element(self, element, x, y, padx=1, pady=1, alignment='nw'):
-        if not ((x in range(0, self.columns)) and (y in range(0, self.rows))):
-            raise KeyError("Not in grid.")
-        new_element = {'element' : element,
-                       'id' : element.winfo_id(),
-                       'x' : x,
-                       'y' : y,
-                       'padx' : padx,
-                       'pady' : pady,
-                       'alignment' : alignment}
-        #self.elements.append(new_element) # TODO: Use a dictionary for easy reference when a user wants to edit an element
-        self.elements[element] = new_element
-        self.draw_grid()
-
-    def add_shape(self, shape, x0, y0, x1=None, y1=None, fill='gray', outline=('black', 2)):
-        if x1 is None:
-            x1 = x0
-        if y1 is None:
-            y1 = y0
-        if not (all(c in range(0, self.rows) for c in [y0, y1]) and all(c in range(0, self.columns) for c in [x0, x1])):
-            raise KeyError("Not in grid.")
-        if not ((x0 <= x1) and (y0 <= y1)):
-            raise ValueError("Invalid key arguments.")
-        
-        s = None
-        if shape == 'rectangle':
-            s = self.create_rectangle(0, 0, 0, 0, fill=fill, outline=outline[0], width=outline[1])
-        self.shapes[s] = {'shape' : shape,
-                          'x0' : x0,
-                          'y0' : y0,
-                          'x1' : x1,
-                          'y1' : y1}
-        #print(self.shapes)
-        self.draw_grid()
-
-    def draw_grid(self, event=None):
-        self.update_column_coords()
-        self.update_row_coords()
-        self.draw_gridlines()
-        #print("Gridlines:\t", self.find_all())
-        self.draw_elements()
-        #print("Elements:\t", self.find_all())
-        self.draw_shapes()
-        #print("Shapes:\t\t", self.find_all())
-
-    def draw_gridlines(self):
-        for g in self.gridlines:
-            self.delete(g)
-        for r in self.row_coords:
-            row = self.create_line(0, r, self.width, r, width=Grid.LINE_WIDTH, fill=self.line_color)
-            self.gridlines.append(row)
-        for c in self.column_coords:
-            column = self.create_line(c, 0, c, self.height, width=Grid.LINE_WIDTH, fill=self.line_color)
-            self.gridlines.append(column)
-        cb = 1 + Grid.LINE_WIDTH
-        self.create_rectangle(cb, cb, self.width-cb, self.height-cb, outline=self.line_color, width=Grid.LINE_WIDTH)
-
-    def draw_elements(self):
-        for e in self.elements.values():
-            self.delete(e['id'])
-        for e in self.elements.values():
-            if type(e['element']) == type(tk.Label()):
-                x, y = self.calculate_element_coords(e)
-                #print(f'x = {coords[0]}\ny = {coords[1]}')
-                e['element'].place(x=x, y=y)
-
-    def draw_shapes(self):
-        # No need to delete/remake old shapes, just resize them
-        for key, s in self.shapes.items():
-            x0, y0, x1, y1 = self.calculate_shape_coords(s)
-            self.coords(key, x0, y0, x1, y1)
-
     def calculate_element_coords(self, e):
+        """
+        Calculate the coordinates for placing an element within a grid cell.
+
+        Parameters:
+            e (dict): A dictionary representing the element and its properties.
+
+        Returns:
+            tuple: The x and y coordinates for placing the element on the canvas.
+        """
         row_coords = [0] + self.row_coords + [self.height]
         column_coords = [0] + self.column_coords + [self.width]
         row_height = row_coords[e['x']+1] - row_coords[e['x']]
@@ -209,6 +187,15 @@ class Grid(tk.Canvas):
         return x_coords[x], y_coords[y]
 
     def calculate_shape_coords(self, s):
+        """
+        Calculate the coordinates for drawing a shape within the grid.
+
+        Parameters:
+            s (dict): A dictionary representing the shape and its properties.
+
+        Returns:
+            tuple: The x and y coordinates of the shape's top-left and bottom-right corners.
+        """
         row_coords = [0] + self.row_coords + [self.height]
         column_coords = [0] + self.column_coords + [self.width]
         x0 = column_coords[s['x0']]
@@ -217,6 +204,200 @@ class Grid(tk.Canvas):
         y1 = row_coords[s['y1']+1]
         #print(x0, y0, x1, y1)
         return x0, y0, x1, y1
+
+    ### Adding to the grid ###
+    def add_row(self, r=1):
+        """
+        Add rows to the grid.
+
+        Parameters:
+            r (int, optional): The number of rows to add. Default is 1.
+        """
+        self.rows += r
+        self.draw_grid()
+
+    def add_column(self, c=1):
+        """
+        Add columns to the grid.
+
+        Parameters:
+            c (int, optional): The number of columns to add. Default is 1.
+        """
+        self.columns += c
+        self.draw_grid()
+
+    def add_element(self, element, x, y, padx=1, pady=1, alignment='nw'):
+        """
+        Add an element to the grid.
+
+        Parameters:
+            element (tk.Widget): The tkinter widget to be added.
+            x (int): The column index for placing the element.
+            y (int): The row index for placing the element.
+            padx (int, optional): The horizontal padding around the element. Default is 1.
+            pady (int, optional): The vertical padding around the element. Default is 1.
+            alignment (str, optional): The alignment of the element within its cell. Default is 'nw'.
+
+        Raises:
+            KeyError: If the specified row or column index is outside the grid boundaries.
+        """
+        if not ((x in range(0, self.columns)) and (y in range(0, self.rows))):
+            raise KeyError("Not in grid.")
+        new_element = {'element' : element,
+                       'id' : element.winfo_id(),
+                       'x' : x,
+                       'y' : y,
+                       'padx' : padx,
+                       'pady' : pady,
+                       'alignment' : alignment}
+        #self.elements.append(new_element) # TODO: Use a dictionary for easy reference when a user wants to edit an element
+        self.elements[element] = new_element
+        self.draw_grid()
+
+    def add_shape(self, shape, x0, y0, x1=None, y1=None, fill='gray', outline=('black', 2)):
+        """
+        Add a shape to the grid.
+
+        Parameters:
+            shape (str): The type of shape to add (currently supports 'rectangle').
+            x0 (int): The column index of the top-left corner of the shape.
+            y0 (int): The row index of the top-left corner of the shape.
+            x1 (int, optional): The column index of the bottom-right corner of the shape. Default is None (for single-cell shapes).
+            y1 (int, optional): The row index of the bottom-right corner of the shape. Default is None (for single-cell shapes).
+            fill (str, optional): The fill color of the shape. Default is 'gray'.
+            outline (tuple, optional): The outline color and width of the shape. Default is ('black', 2).
+
+        Raises:
+            KeyError: If the specified row or column index is outside the grid boundaries.
+            ValueError: If the coordinates of the shape are invalid.
+        """
+        if x1 is None:
+            x1 = x0
+        if y1 is None:
+            y1 = y0
+        if not (all(c in range(0, self.rows) for c in [y0, y1]) and all(c in range(0, self.columns) for c in [x0, x1])):
+            raise KeyError("Not in grid.")
+        if not ((x0 <= x1) and (y0 <= y1)):
+            raise ValueError("Invalid key arguments.")
+        
+        s = None
+        if shape == 'rectangle':
+            s = self.create_rectangle(0, 0, 0, 0, fill=fill, outline=outline[0], width=outline[1])
+        self.shapes[s] = {'shape' : shape,
+                          'x0' : x0,
+                          'y0' : y0,
+                          'x1' : x1,
+                          'y1' : y1}
+        #print(self.shapes)
+        self.draw_grid()
+
+    ### Deleting from the grid ###
+    def del_row(self, r=1):
+        """
+        Delete rows from the grid.
+
+        Parameters:
+            r (int, optional): The number of rows to delete. Default is 1.
+
+        Raises:
+            ValueError: If the number of rows to delete is greater than the current number of rows.
+        """
+        if r >= self.rows:
+            raise ValueError("Grid requires at least one row.")
+        self.rows -= r
+        self.draw_grid()
+
+    def del_column(self, c=1):
+        """
+        Delete columns from the grid.
+
+        Parameters:
+            c (int, optional): The number of columns to delete. Default is 1.
+
+        Raises:
+            ValueError: If the number of columns to delete is greater than the current number of columns.
+        """
+        if c >= self.columns:
+            raise ValueError("Grid requires at least one column.")
+        self.columns -= c
+        self.draw_grid()
+
+    def del_element(self): # TODO: Implement
+        """
+        Delete an element from the grid.
+
+        Note: This method is intended to be implemented by the developer as it requires specific logic based on the application.
+
+        Raises:
+            NotImplementedError: If the method is not overridden.
+        """
+        raise NotImplementedError("Method 'del_element' must be implemented in a subclass.")
+    
+    def del_shape(self): # TODO: Implement
+        """
+        Delete a shape from the grid.
+
+        Note: This method is intended to be implemented by the developer as it requires specific logic based on the application.
+
+        Raises:
+            NotImplementedError: If the method is not overridden.
+        """
+        raise NotImplementedError("Method 'del_shape' must be implemented in a subclass.")
+
+    ### Locking/unlocking rows & columns ###
+    def lock_row(self, h, row=None):
+        """
+        Lock a row in the grid to a specific height.
+
+        Parameters:
+            h (int): The height (in pixels) to which the row should be locked.
+            row (int, optional): The row index to lock. If not provided, a new locked row will be added to the grid.
+
+        Raises:
+            KeyError: If the specified row index is outside the grid boundaries.
+        """
+        if (row is not None) and (row >= len(self.locked_rows)):
+            raise KeyError
+        elif (row is not None) and (row < len(self.locked_rows)):
+            self.locked_rows[row] = h
+        else:
+            self.locked_rows.append(h)
+        self.draw_grid()
+    
+    def lock_column(self, w, column=None):
+        """
+        Lock a column in the grid to a specific width.
+
+        Parameters:
+            w (int): The width (in pixels) to which the column should be locked.
+            column (int, optional): The column index to lock. If not provided, a new locked column will be added to the grid.
+
+        Raises:
+            KeyError: If the specified column index is outside the grid boundaries.
+        """
+        if (column is not None) and (column >= len(self.locked_columns)):
+            raise KeyError
+        elif (column is not None) and (column < len(self.locked_rows)):
+            self.locked_columns[column] = w
+        else:
+            self.locked_columns.append(w)
+        self.draw_grid()
+
+    def unlock_row(self):
+        """
+        Unlock the last locked row in the grid.
+        """
+        if len(self.locked_rows) > 0:
+            self.locked_rows.pop()
+            self.draw_grid()
+
+    def unlock_column(self):
+        """
+        Unlock the last locked column in the grid.
+        """
+        if len(self.locked_columns) > 0:
+            self.locked_columns.pop()
+            self.draw_grid()
 
 class Schedule(tk.Tk):
     TITLE = 'Pool & Playground Schedule'
