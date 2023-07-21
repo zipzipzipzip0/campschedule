@@ -1,6 +1,40 @@
 import tkinter as tk
 import datetime as dt
 
+class Rectangle:
+    EDGE_WIDTH = 5
+
+    def __init__(self, canvas, x0, y0, x1, y1, outline='black', width=0, **kwargs):
+        self.canvas = canvas
+        self.id = None
+        self.x0, self.y0, self.x1, self.y1 = x0, y0, x1, y1
+        self.outline = outline
+        self.width = width
+        self.kwargs = kwargs
+        self.create_base()
+    
+    def create_base(self):
+        self.id = self.canvas.create_rectangle(self.x0, self.y0, self.x1, self.y1, outline=self.outline, width=self.width, **self.kwargs)
+
+    def get_edge(self, event):
+        b = 0b0000
+        # North
+        if (self.y0 <= event.y <= self.y0+Rectangle.EDGE_WIDTH):
+            b += 8
+        # East
+        if (self.x1-Rectangle.EDGE_WIDTH <= event.x <= self.x1):
+            b += 4
+        # South
+        if (self.y1-Rectangle.EDGE_WIDTH <= event.y <= self.y1):
+            b += 2
+        # West
+        if (self.x0 <= event.x <= self.x0+Rectangle.EDGE_WIDTH):
+            b += 1
+        return b
+    
+    def coords(self):
+        self.canvas.coords(self.id, self.x0, self.y0, self.x1, self.y1)
+
 class Grid(tk.Canvas):
     """
     A custom tkinter Canvas widget that displays a grid with elements and shapes.
@@ -524,7 +558,22 @@ class Schedule(tk.Tk):
         self.height = self.winfo_height()
         #print(f'Window Dimensions: {self.width} x {self.height}')
 
-def test():
+def test_rectangle():
+    root = tk.Tk()
+    root.geometry('400x400')
+
+    frame = tk.Frame(root)
+    frame.config(highlightbackground='black', highlightcolor='black', highlightthickness=2)
+    frame.place(x=75, y=75, width=250, height=250)
+
+    canvas = tk.Canvas(frame)
+    canvas.pack()
+
+    rect = Rectangle(canvas, 10, 10, 50, 50, fill='pink')
+    
+    root.mainloop()
+
+def test_grid():
     root = tk.Tk()
     root.geometry('400x400')
 
@@ -558,5 +607,6 @@ def main():
     root.mainloop()
 
 if __name__ == '__main__':
-    test()
+    test_rectangle()
+    #test_grid()
     #main()
