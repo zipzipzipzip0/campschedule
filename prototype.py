@@ -15,6 +15,8 @@ class Rectangle:
     
     def create_base(self):
         self.id = self.canvas.create_rectangle(self.x0, self.y0, self.x1, self.y1, outline=self.outline, width=self.width, **self.kwargs)
+        self.canvas.tag_bind(self.id, '<Button 1>', self.select)
+        self.canvas.tag_bind(self.id, '<B1-Motion>', self.drag)
 
     def get_edge(self, event):
         b = 0b0000
@@ -32,9 +34,41 @@ class Rectangle:
             b += 1
         return b
     
-    def coords(self):
-        self.canvas.coords(self.id, self.x0, self.y0, self.x1, self.y1)
+    def coords(self, x0, y0, x1, y1):
+        self.canvas.coords(self.id, x0, y0, x1, y1)
 
+    def select(self, event):
+        global selected, start_x, start_y, initial_coords
+        selected = self.get_edge(event)
+        start_x, start_y = event.x, event.y
+        initial_coords = {'x0':self.x0, 'y0':self.y0, 'x1':self.x1, 'y1':self.y1}
+
+    def drag(self, event):
+        global selected, start_x, start_y, initial_coords
+        dx = event.x - start_x
+        dy = event.y - start_y
+
+        # North
+        if (selected & (1 << 3)):
+            self.y0 = initial_coords['y0'] + dy
+        # East
+        if (selected & (1 << 2)):
+            self.x1 = initial_coords['x1'] + dx
+        # South
+        if (selected & (1 << 1)):
+            self.y1 = initial_coords['y1'] + dy
+        # West
+        if (selected & (1 << 0)):
+            self.x0 = initial_coords['x0'] + dx
+        # Move
+        if (selected == 0b0000):
+            self.x0 = initial_coords['x0'] + dx
+            self.y0 = initial_coords['y0'] + dy
+            self.x1 = initial_coords['x1'] + dx
+            self.y1 = initial_coords['y1'] + dy
+        
+        self.coords(self.x0, self.y0, self.x1, self.y1)
+        
 class Grid(tk.Canvas):
     """
     A custom tkinter Canvas widget that displays a grid with elements and shapes.
@@ -569,7 +603,7 @@ def test_rectangle():
     canvas = tk.Canvas(frame)
     canvas.pack()
 
-    rect = Rectangle(canvas, 10, 10, 50, 50, fill='pink')
+    rect = Rectangle(canvas, 85, 85, 165, 165, fill='pink')
     
     root.mainloop()
 
