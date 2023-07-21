@@ -2,7 +2,7 @@ import tkinter as tk
 import datetime as dt
 
 class Rectangle:
-    EDGE_WIDTH = 5
+    EDGE_WIDTH = 10
 
     def __init__(self, canvas, x0, y0, x1, y1, outline='black', width=0, **kwargs):
         self.canvas = canvas
@@ -17,20 +17,40 @@ class Rectangle:
         self.id = self.canvas.create_rectangle(self.x0, self.y0, self.x1, self.y1, outline=self.outline, width=self.width, **self.kwargs)
         self.canvas.tag_bind(self.id, '<Button 1>', self.select)
         self.canvas.tag_bind(self.id, '<B1-Motion>', self.drag)
+        self.canvas.tag_bind(self.id, '<Motion>', self.cursor)
+        self.canvas.tag_bind(self.id, '<Leave>', lambda event: self.canvas.winfo_toplevel().config(cursor=''))
+
+    def cursor(self, event=None, selected=None):
+        if event is not None:
+            selected = self.get_edge(event)
+        # North & South
+        if (selected & (1 << 3)) or (selected & (1 << 1)):
+            self.canvas.winfo_toplevel().config(cursor='sb_v_double_arrow')
+        # East & West
+        if (selected & (1 << 2)) or (selected & (1 << 0)):
+            self.canvas.winfo_toplevel().config(cursor='sb_h_double_arrow')
+        # NW & SE
+        if ((selected & (1 << 3)) and (selected & (1 << 0))) or ((selected & (1 << 1)) and (selected & (1 << 2))):
+            self.canvas.winfo_toplevel().config(cursor='size_nw_se')
+        # NE & SW
+        if ((selected & (1 << 3)) and (selected & (1 << 2))) or ((selected & (1 << 1)) and (selected & (1 << 0))):
+            self.canvas.winfo_toplevel().config(cursor='size_ne_sw')
+        # Center
+        if (selected == 0b0000):
+            self.canvas.winfo_toplevel().config(cursor='fleur')
 
     def get_edge(self, event):
         b = 0b0000
-        # North
-        if (self.y0 <= event.y <= self.y0+Rectangle.EDGE_WIDTH):
+        if (event.y <= self.y0+Rectangle.EDGE_WIDTH):
             b += 8
         # East
-        if (self.x1-Rectangle.EDGE_WIDTH <= event.x <= self.x1):
+        if (self.x1-Rectangle.EDGE_WIDTH <= event.x):
             b += 4
         # South
-        if (self.y1-Rectangle.EDGE_WIDTH <= event.y <= self.y1):
+        if (self.y1-Rectangle.EDGE_WIDTH <= event.y):
             b += 2
         # West
-        if (self.x0 <= event.x <= self.x0+Rectangle.EDGE_WIDTH):
+        if (event.x <= self.x0+Rectangle.EDGE_WIDTH):
             b += 1
         return b
     
@@ -47,20 +67,20 @@ class Rectangle:
         global selected, start_x, start_y, initial_coords
         dx = event.x - start_x
         dy = event.y - start_y
-
+        self.cursor(selected=selected)
         # North
-        if (selected & (1 << 3)):
+        if (selected & (1 << 3)) and (initial_coords['y0'] + dy <= initial_coords['y1'] - (3 * Rectangle.EDGE_WIDTH)):
             self.y0 = initial_coords['y0'] + dy
         # East
-        if (selected & (1 << 2)):
+        if (selected & (1 << 2)) and (initial_coords['x1'] + dx >= initial_coords['x0'] + (3 * Rectangle.EDGE_WIDTH)):
             self.x1 = initial_coords['x1'] + dx
         # South
-        if (selected & (1 << 1)):
+        if (selected & (1 << 1)) and (initial_coords['y1'] + dy >= initial_coords['y0'] + (3 * Rectangle.EDGE_WIDTH)):
             self.y1 = initial_coords['y1'] + dy
         # West
-        if (selected & (1 << 0)):
+        if (selected & (1 << 0)) and (initial_coords['x0'] + dx <= initial_coords['x1'] - (3 * Rectangle.EDGE_WIDTH)):
             self.x0 = initial_coords['x0'] + dx
-        # Move
+        # Center
         if (selected == 0b0000):
             self.x0 = initial_coords['x0'] + dx
             self.y0 = initial_coords['y0'] + dy
@@ -68,7 +88,7 @@ class Rectangle:
             self.y1 = initial_coords['y1'] + dy
         
         self.coords(self.x0, self.y0, self.x1, self.y1)
-        
+
 class Grid(tk.Canvas):
     """
     A custom tkinter Canvas widget that displays a grid with elements and shapes.
