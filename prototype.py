@@ -283,13 +283,24 @@ class Grid(tk.Canvas):
         s = None
         if shape == 'rectangle':
             s = self.create_rectangle(0, 0, 0, 0, fill=fill, outline=outline[0], width=outline[1])
+        else:
+            raise TypeError("Invalid shape.")
         self.shapes[s] = {'shape' : shape,
                           'x0' : x0,
                           'y0' : y0,
                           'x1' : x1,
                           'y1' : y1}
+        self.bind_shape(s)
         #print(self.shapes)
         self.draw_grid()
+
+    ### Binds for user interaction ###
+    def bind_element(self, element):
+        raise NotImplementedError
+    
+    def bind_shape(self, shape):
+        self.tag_bind(shape, '<Button 1>', self.select)
+        self.tag_bind(shape, '<B1-Motion>', self.drag)
 
     ### Deleting from the grid ###
     def del_row(self, r=1):
@@ -399,6 +410,56 @@ class Grid(tk.Canvas):
             self.locked_columns.pop()
             self.draw_grid()
 
+    ### Moving within the grid ###
+    def find_cursor(self, event):
+        row_coords = [0] + self.row_coords + [self.height]
+        column_coords = [0] + self.column_coords + [self.width]
+
+        x = 0
+        while (x < self.columns) and (event.x > column_coords[x+1]):
+            x += 1
+        y = 0
+        while (y < self.rows) and (event.y > row_coords[y+1]):
+            y += 1
+        #print(x, y)
+        return x, y
+
+    def select(self, event):
+        global selected, initial_coords, start_x, start_y
+        selected = event.widget.find_closest(event.x, event.y)[0]
+        initial_coords = self.shapes[selected].copy()
+        start_x, start_y = self.find_cursor(event)
+        #print(initial_coords)
+        #print(self.shapes[selected])
+
+    def drag(self, event):
+        global selected, initial_coords, start_x, start_y
+        x, y = self.find_cursor(event)
+        dx = x - start_x
+        dy = y - start_y
+        
+        bump_left = initial_coords['x0'] + dx < 0
+        bump_right = initial_coords['x1'] + dx >= self.columns
+        bump_top = initial_coords['y0'] + dy < 0
+        bump_bottom = initial_coords['y1'] + dy >= self.rows
+
+        if not (bump_left or bump_right):
+            self.shapes[selected]['x0'] = initial_coords['x0'] + dx
+            self.shapes[selected]['x1'] = initial_coords['x1'] + dx
+        if not (bump_top or bump_bottom):
+            self.shapes[selected]['y0'] = initial_coords['y0'] + dy
+            self.shapes[selected]['y1'] = initial_coords['y1'] + dy
+
+        # if bump_left:
+        #     print(f"bump left!\tx0: {self.shapes[selected]['x0']}\tx0+dx: {initial_coords['x0'] + dx}")
+        # if bump_right:
+        #     print(f"bump right!\tx1: {self.shapes[selected]['x1']}\tx1+dx: {initial_coords['x1'] + dx}")
+        # if bump_top:
+        #     print(f"bump top!\ty0: {self.shapes[selected]['y0']}\ty0+dy: {initial_coords['y0'] + dy}")
+        # if bump_bottom:
+        #     print(f"bump bottom!\ty1: {self.shapes[selected]['y1']}\ty1+dy: {initial_coords['y1'] + dy}")
+        self.draw_shapes()
+
 class Schedule(tk.Tk):
     TITLE = 'Pool & Playground Schedule'
     FRAME_COLOR = 'lightblue'
@@ -469,17 +530,17 @@ def test():
 
     frame = tk.Frame(root)
     frame.config(highlightbackground='black', highlightcolor='black', highlightthickness=2)
-    frame.place(x=100, y=100, width=200, height=200)
+    frame.place(x=75, y=75, width=250, height=250)
 
-    grid = Grid(frame, 5, 5)
+    grid = Grid(frame, 7, 7)
     grid.pack()
 
-    print("Making Label...")
-    label = tk.Label(grid, text="test")
-    grid.add_element(label, 1, 1, alignment='c')
+    # print("Making Label...")
+    # label = tk.Label(grid, text="test")
+    # grid.add_element(label, 1, 1, alignment='c')
 
     print("Making Rectangle...")
-    grid.add_shape('rectangle', 1, 0, 2, 0)
+    grid.add_shape('rectangle', 1, 1, 3, 3)
 
     b1 = tk.Button(root, text="Add Row", command=grid.add_row)
     b1.grid(row=0, column=0)
