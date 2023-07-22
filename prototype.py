@@ -2,21 +2,34 @@ import tkinter as tk
 import datetime as dt
 
 class Rectangle:
-    EDGE_WIDTH = 7.5
+    EDGE_WIDTH = 10
 
     def __init__(self, canvas, x0, y0, x1, y1, outline='black', width=0, **kwargs):
         self.canvas = canvas
+        self.snappy = False
+        if type(self.canvas) == Grid:
+            self.snappy = True
         self.id = None
         self.x0, self.y0, self.x1, self.y1 = x0, y0, x1, y1
         self.outline = outline
         self.width = width
         self.kwargs = kwargs
+
         self.create_base()
+        self.setup_binds()
+    
+    def get_id(self):
+        return self.id
     
     def create_base(self):
         self.id = self.canvas.create_rectangle(self.x0, self.y0, self.x1, self.y1, outline=self.outline, width=self.width, **self.kwargs)
+
+    def setup_binds(self):
         self.canvas.tag_bind(self.id, '<Button 1>', self.select)
-        self.canvas.tag_bind(self.id, '<B1-Motion>', self.drag)
+        if self.snappy:
+            self.canvas.tag_bind(self.id, '<B1-Motion>', self.snappy_drag)
+        else:
+            self.canvas.tag_bind(self.id, '<B1-Motion>', self.drag)
         self.canvas.tag_bind(self.id, '<Motion>', self.cursor)
         self.canvas.tag_bind(self.id, '<Leave>', lambda event: self.canvas.winfo_toplevel().config(cursor=''))
 
@@ -59,10 +72,17 @@ class Rectangle:
         self.canvas.coords(self.id, x0, y0, x1, y1)
 
     def select(self, event):
-        global selected, start_x, start_y, initial_coords
+        global selected, start_x, start_y, shape, initial_coords
         selected = self.get_edge(event)
-        start_x, start_y = event.x, event.y
-        initial_coords = {'x0':self.x0, 'y0':self.y0, 'x1':self.x1, 'y1':self.y1}
+        if self.snappy:
+            start_x, start_y = self.canvas.grid_coord(event)
+            shape = self.canvas.get_shape(self).copy()
+        else:
+            start_x, start_y = event.x, event.y
+        initial_coords = {'x0':self.x0,
+                            'y0':self.y0,
+                            'x1':self.x1,
+                            'y1':self.y1}
 
     def drag(self, event):
         global selected, start_x, start_y, initial_coords
@@ -89,6 +109,43 @@ class Rectangle:
             self.y1 = initial_coords['y1'] + dy
         
         self.coords(self.x0, self.y0, self.x1, self.y1)
+    
+    def snappy_drag(self, event):
+        global selected, start_x, start_y, initial_coords
+        x, y = self.canvas.grid_coord(event)
+        dx = x - start_x
+        dy = y - start_y
+        self.cursor(selected=selected)
+
+        bump_north = shape['y0'] + dy < 0
+        bump_east = shape['x1'] + dx >= self.canvas.columns
+        bump_south = shape['y1'] + dy >= self.canvas.rows
+        bump_west = shape['x0'] + dx < 0
+
+        new_x0, new_y0, new_x1, new_y1 = shape['x0'], shape['y0'], shape['x1'], shape['y1']
+        # North
+        if (selected & (1 << 3)) and (shape['y0'] + dy <= shape['y1']) and not bump_north:
+            self.canvas.set_shape_coords(self, y0=shape['y0']+dy)
+        # East
+        if (selected & (1 << 2)) and (shape['x1'] + dx >= shape['x0']) and not bump_east:
+            self.canvas.set_shape_coords(self, x1=shape['x1']+dx)
+        # South
+        if (selected & (1 << 1)) and (shape['y1'] + dy >= shape['y0']) and not bump_south:
+            self.canvas.set_shape_coords(self, y1=shape['y1']+dy)
+        # West
+        if (selected & (1 << 0)) and (shape['x0'] + dx <= shape['x1']) and not bump_west:
+            self.canvas.set_shape_coords(self, x0=shape['x0']+dx)
+        # Center
+        if (selected == 0b0000):
+            if not (bump_north or bump_south):
+                self.canvas.set_shape_coords(self, y0=shape['y0']+dy)
+                self.canvas.set_shape_coords(self, y1=shape['y1']+dy)
+            if not (bump_east or bump_west):
+                self.canvas.set_shape_coords(self, x0=shape['x0']+dx)
+                self.canvas.set_shape_coords(self, x1=shape['x1']+dx)
+        
+        self.x0, self.y0, self.x1, self.y1 = self.canvas.calculate_shape_coords(shape)
+        self.canvas.draw_grid()
 
 class Grid(tk.Canvas):
     """
@@ -143,6 +200,29 @@ class Grid(tk.Canvas):
 
         self.bind('<Configure>', self.draw_grid)
     
+    ### Getter/Setter methods ##
+    def rows(self):
+        return self.rows
+    
+    def columns(self):
+        return self.columns
+
+    def get_gridline_coords(self):
+        return self.row_coords, self.column_coords
+
+    def get_shape(self, shape):
+        return self.shapes[shape]
+    
+    def set_shape_coords(self, shape, x0=None, y0=None, x1=None, y1=None):
+        if x0 is not None:
+            self.shapes[shape]['x0'] = x0
+        if y0 is not None:
+            self.shapes[shape]['y0'] = y0
+        if x1 is not None:
+            self.shapes[shape]['x1'] = x1
+        if y1 is not None:
+            self.shapes[shape]['y1'] = y1
+
     ### Draw the grid ###
     def draw_grid(self, event=None):
         """
@@ -344,7 +424,7 @@ class Grid(tk.Canvas):
         self.elements[element] = new_element
         self.draw_grid()
 
-    def add_shape(self, shape, x0, y0, x1=None, y1=None, fill='gray', outline=('black', 2)):
+    def add_shape(self, shape, x0, y0, x1=None, y1=None, fill='gray', outline=('black', 0)):
         """
         Add a shape to the grid.
 
@@ -501,31 +581,34 @@ class Grid(tk.Canvas):
             self.locked_columns.pop()
             self.draw_grid()
 
-    # ### Moving within the grid ###
-    # def find_cursor(self, event):
-    #     row_coords = [0] + self.row_coords + [self.height]
-    #     column_coords = [0] + self.column_coords + [self.width]
+    ### Moving within the grid ###
+    def grid_coord(self, event=None, x=None, y=None):
+        row_coords = [0] + self.row_coords + [self.height]
+        column_coords = [0] + self.column_coords + [self.width]
 
-    #     x = 0
-    #     while (x < self.columns) and (event.x > column_coords[x+1]):
-    #         x += 1
-    #     y = 0
-    #     while (y < self.rows) and (event.y > row_coords[y+1]):
-    #         y += 1
-    #     #print(x, y)
-    #     return x, y
+        if event is not None:
+            x, y = event.x, event.y
+        
+        gx = 0
+        while (gx < self.columns) and (x > column_coords[gx+1]):
+            gx += 1
+        gy = 0
+        while (gy < self.rows) and (y > row_coords[gy+1]):
+            gy += 1
+        #print(x, y)
+        return gx, gy
 
     # def select(self, event):
     #     global selected, initial_coords, start_x, start_y
     #     selected = event.widget.find_closest(event.x, event.y)[0]
     #     initial_coords = self.shapes[selected].copy()
-    #     start_x, start_y = self.find_cursor(event)
+    #     start_x, start_y = self.grid_coord(event)
     #     #print(initial_coords)
     #     #print(self.shapes[selected])
 
     # def drag(self, event):
     #     global selected, initial_coords, start_x, start_y
-    #     x, y = self.find_cursor(event)
+    #     x, y = self.grid_coord(event)
     #     dx = x - start_x
     #     dy = y - start_y
         
@@ -646,7 +729,7 @@ def test_grid():
     # grid.add_element(label, 1, 1, alignment='c')
 
     print("Making Rectangle...")
-    grid.add_shape('rectangle', 1, 1, 3, 3)
+    grid.add_shape('rectangle', 1, 1, 3, 3, fill='pink')
 
     b1 = tk.Button(root, text="Add Row", command=grid.add_row)
     b1.grid(row=0, column=0)
