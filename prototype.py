@@ -15,12 +15,17 @@ class Rectangle:
         self.width = width
         self.kwargs = kwargs
 
+        self.components = {}
+
         self.create_base()
         self.setup_binds()
     
     def get_id(self):
         return self.id
     
+    def get_coords(self):
+        return self.x0, self.y0, self.x1, self.y1
+
     def create_base(self):
         self.id = self.canvas.create_rectangle(self.x0, self.y0, self.x1, self.y1, outline=self.outline, width=self.width, **self.kwargs)
 
@@ -30,10 +35,10 @@ class Rectangle:
             self.canvas.tag_bind(self.id, '<B1-Motion>', self.snappy_drag)
         else:
             self.canvas.tag_bind(self.id, '<B1-Motion>', self.drag)
-        self.canvas.tag_bind(self.id, '<Motion>', self.cursor)
+        self.canvas.tag_bind(self.id, '<Motion>', self.hover_cursor)
         self.canvas.tag_bind(self.id, '<Leave>', lambda event: self.canvas.winfo_toplevel().config(cursor=''))
 
-    def cursor(self, event=None, selected=None):
+    def hover_cursor(self, event=None, selected=None):
         if event is not None:
             selected = self.get_edge(event)
         # North & South
@@ -52,8 +57,13 @@ class Rectangle:
         if (selected == 0b0000):
             self.canvas.winfo_toplevel().config(cursor='fleur')
 
+    def leave_cursor(self, event):
+        if (event.x < self.x0) or (event.x > self.x1) or (event.y < self.y0) or (event.y > self.y1):
+            self.canvas.winfo_toplevel().config(cursor='')
+
     def get_edge(self, event):
         b = 0b0000
+        # North
         if (event.y <= self.y0+Rectangle.EDGE_WIDTH):
             b += 8
         # East
@@ -115,7 +125,7 @@ class Rectangle:
         x, y = self.canvas.grid_coord(event)
         dx = x - start_x
         dy = y - start_y
-        self.cursor(selected=selected)
+        self.hover_cursor(selected=selected)
 
         bump_north = shape['y0'] + dy < 0
         bump_east = shape['x1'] + dx >= self.canvas.columns
@@ -146,6 +156,34 @@ class Rectangle:
         
         self.x0, self.y0, self.x1, self.y1 = self.canvas.calculate_shape_coords(shape)
         self.canvas.draw_grid()
+
+    def attach(self, other):
+        a = self.canvas.get_shape(self).copy()
+        b = self.canvas.get_shape(other).copy()
+
+        position = None
+        # North
+        if (a['y0']-1 == b['y1']) and ((a['x0']-1 < b['x1']) or (a['x1'] > b['x0']-1)):
+            position = 'north'
+        # East
+        elif (a['x1'] == b['x0']-1) and ((a['y0']-1 < b['y1']) or (a['y1'] > b['y0']-1)):
+            position = 'east'
+        # South
+        elif (a['y1'] == b['y0']-1) and ((a['x0']-1 < b['x1']) or (a['x1'] > b['x0']-1)):
+            position = 'south'
+        # West
+        elif (a['x0']-1 == b['x1']) and ((a['y0']-1 < b['y1']) or (a['y1'] > b['y0']-1)):
+            position = 'west'
+        else:
+            raise IndexError("Invalid attach target.")
+        
+        self.components[other] = {'position':position,
+                                  'x0':b['x0'],
+                                  'y0':b['y0'],
+                                  'x1':b['x1'],
+                                  'y1':b['y1']}
+        print(f'{a}\n{b}')
+        print(position)
 
 class Grid(tk.Canvas):
     """
@@ -464,6 +502,7 @@ class Grid(tk.Canvas):
         #self.bind_shape(s)
         #print(self.shapes)
         self.draw_grid()
+        return s
 
     ### Binds for user interaction ###
     def bind_element(self, element):
@@ -729,7 +768,10 @@ def test_grid():
     # grid.add_element(label, 1, 1, alignment='c')
 
     print("Making Rectangle...")
-    grid.add_shape('rectangle', 1, 1, 3, 3, fill='pink')
+    rect1 = grid.add_shape('rectangle', 1, 1, 2, 3, fill='cornflower blue')
+    rect2 = grid.add_shape('rectangle', 3, 1, 5, 2, fill='coral')
+
+    #rect1.attach(rect2)
 
     b1 = tk.Button(root, text="Add Row", command=grid.add_row)
     b1.grid(row=0, column=0)
@@ -739,6 +781,9 @@ def test_grid():
     b3.grid(row=0, column=2)
     b4 = tk.Button(root, text="Delete Column", command=grid.del_column)
     b4.grid(row=0, column=3)
+
+    b5 = tk.Button(root, text="Attach", command=lambda:rect1.attach(rect2))
+    b5.grid(row=0, column=4)
 
     root.mainloop()
 
