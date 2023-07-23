@@ -131,6 +131,15 @@ class Rectangle:
         bump_east = shape['x1'] + dx >= self.canvas.columns
         bump_south = shape['y1'] + dy >= self.canvas.rows
         bump_west = shape['x0'] + dx < 0
+        for c in self.components.values():
+            if (c['y0'] + dy < 0):
+                bump_north = True
+            if (c['x1'] + dx >= self.canvas.columns):
+                bump_east = True
+            if (c['y1'] + dy >= self.canvas.rows):
+                bump_south = True
+            if (c['x0'] + dx < 0):
+                bump_west = True
 
         new_x0, new_y0, new_x1, new_y1 = shape['x0'], shape['y0'], shape['x1'], shape['y1']
         # North
@@ -150,14 +159,21 @@ class Rectangle:
             if not (bump_north or bump_south):
                 self.canvas.set_shape_coords(self, y0=shape['y0']+dy)
                 self.canvas.set_shape_coords(self, y1=shape['y1']+dy)
+                for c, s in self.components.items():
+                    c.canvas.set_shape_coords(c, y0=s['y0']+dy)
+                    c.canvas.set_shape_coords(c, y1=s['y1']+dy)
             if not (bump_east or bump_west):
                 self.canvas.set_shape_coords(self, x0=shape['x0']+dx)
                 self.canvas.set_shape_coords(self, x1=shape['x1']+dx)
+                for c, s in self.components.items():
+                    c.canvas.set_shape_coords(c, x0=s['x0']+dx)
+                    c.canvas.set_shape_coords(c, x1=s['x1']+dx)
+
         
         self.x0, self.y0, self.x1, self.y1 = self.canvas.calculate_shape_coords(shape)
         self.canvas.draw_grid()
 
-    def attach(self, other):
+    def attach(self, other, is_prime=True):
         a = self.canvas.get_shape(self).copy()
         b = self.canvas.get_shape(other).copy()
 
@@ -184,6 +200,9 @@ class Rectangle:
                                   'y1':b['y1']}
         print(f'{a}\n{b}')
         print(position)
+
+        if is_prime:
+            other.attach(self, is_prime=False)
 
 class Grid(tk.Canvas):
     """
