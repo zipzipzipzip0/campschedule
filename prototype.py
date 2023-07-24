@@ -77,6 +77,9 @@ class Rectangle:
             b += 1
         return b
     
+    def bin_to_pos(self, bin):
+        return
+
     def coords(self, x0, y0, x1, y1):
         self.x0, self.y0, self.x1, self.y1 = x0, y0, x1, y1
         self.canvas.coords(self.id, x0, y0, x1, y1)
@@ -84,15 +87,24 @@ class Rectangle:
     def select(self, event):
         global selected, start_x, start_y, shape, initial_coords
         selected = self.get_edge(event)
+        initial_coords = {}
         if self.snappy:
             start_x, start_y = self.canvas.grid_coord(event)
             shape = self.canvas.get_shape(self).copy()
+            for c, s in self.components.items():
+                initial_coords[c] = {'position':s['position'],
+                                     'x0':s['x0'],
+                                     'y0':s['y0'],
+                                     'x1':s['x1'],
+                                     'y1':s['y1']}
         else:
             start_x, start_y = event.x, event.y
-        initial_coords = {'x0':self.x0,
-                            'y0':self.y0,
-                            'x1':self.x1,
-                            'y1':self.y1}
+            # TODO: Either make Rectangle only snappy or fix logic for non-snappy
+            initial_coords = {'x0':self.x0,
+                                'y0':self.y0,
+                                'x1':self.x1,
+                                'y1':self.y1}
+        
 
     def drag(self, event):
         global selected, start_x, start_y, initial_coords
@@ -131,46 +143,68 @@ class Rectangle:
         bump_east = shape['x1'] + dx >= self.canvas.columns
         bump_south = shape['y1'] + dy >= self.canvas.rows
         bump_west = shape['x0'] + dx < 0
-        for c in self.components.values():
-            if (c['y0'] + dy < 0):
+        for c, s in initial_coords.items():
+            if (s['y0'] + dy < 0):
                 bump_north = True
-            if (c['x1'] + dx >= self.canvas.columns):
+            if (s['x1'] + dx >= self.canvas.columns):
                 bump_east = True
-            if (c['y1'] + dy >= self.canvas.rows):
+            if (s['y1'] + dy >= self.canvas.rows):
                 bump_south = True
-            if (c['x0'] + dx < 0):
+            if (s['x0'] + dx < 0):
                 bump_west = True
 
-        new_x0, new_y0, new_x1, new_y1 = shape['x0'], shape['y0'], shape['x1'], shape['y1']
         # North
         if (selected & (1 << 3)) and (shape['y0'] + dy <= shape['y1']) and not bump_north:
             self.canvas.set_shape_coords(self, y0=shape['y0']+dy)
+            for c, s in initial_coords.items():
+                if s['position'] == 'north':
+                    c.canvas.set_shape_coords(c, y0=initial_coords[c]['y0']+dy, y1=initial_coords[c]['y1']+dy)
+                    self.components[c]['y0'] = initial_coords[c]['y0'] + dy
+                    self.components[c]['y1'] = initial_coords[c]['y1'] + dy
+
         # East
         if (selected & (1 << 2)) and (shape['x1'] + dx >= shape['x0']) and not bump_east:
             self.canvas.set_shape_coords(self, x1=shape['x1']+dx)
+            for c, s in initial_coords.items():
+                if s['position'] == 'east':
+                    c.canvas.set_shape_coords(c, x0=initial_coords[c]['x0']+dx, x1=initial_coords[c]['x1']+dx)
+                    self.components[c]['x0'] = initial_coords[c]['x0'] + dx
+                    self.components[c]['x1'] = initial_coords[c]['x1'] + dx
         # South
         if (selected & (1 << 1)) and (shape['y1'] + dy >= shape['y0']) and not bump_south:
             self.canvas.set_shape_coords(self, y1=shape['y1']+dy)
+            for c, s in initial_coords.items():
+                if s['position'] == 'south':
+                    c.canvas.set_shape_coords(c, y0=initial_coords[c]['y0']+dy, y1=initial_coords[c]['y1']+dy)
+                    self.components[c]['y0'] = initial_coords[c]['y0'] + dy
+                    self.components[c]['y1'] = initial_coords[c]['y1'] + dy
         # West
         if (selected & (1 << 0)) and (shape['x0'] + dx <= shape['x1']) and not bump_west:
             self.canvas.set_shape_coords(self, x0=shape['x0']+dx)
+            for c, s in initial_coords.items():
+                if s['position'] == 'west':
+                    c.canvas.set_shape_coords(c, x0=initial_coords[c]['x0']+dx, x1=initial_coords[c]['x1']+dx)
+                    self.components[c]['x0'] = initial_coords[c]['x0'] + dx
+                    self.components[c]['x1'] = initial_coords[c]['x1'] + dx
         # Center
         if (selected == 0b0000):
             if not (bump_north or bump_south):
-                self.canvas.set_shape_coords(self, y0=shape['y0']+dy)
-                self.canvas.set_shape_coords(self, y1=shape['y1']+dy)
-                for c, s in self.components.items():
-                    c.canvas.set_shape_coords(c, y0=s['y0']+dy)
-                    c.canvas.set_shape_coords(c, y1=s['y1']+dy)
+                self.canvas.set_shape_coords(self, y0=shape['y0']+dy, y1=shape['y1']+dy)
+                for c, s in initial_coords.items():
+                    c.canvas.set_shape_coords(c, y0=initial_coords[c]['y0']+dy, y1=initial_coords[c]['y1']+dy)
+                    self.components[c]['y0'] = initial_coords[c]['y0'] + dy
+                    self.components[c]['y1'] = initial_coords[c]['y1'] + dy
             if not (bump_east or bump_west):
-                self.canvas.set_shape_coords(self, x0=shape['x0']+dx)
-                self.canvas.set_shape_coords(self, x1=shape['x1']+dx)
-                for c, s in self.components.items():
-                    c.canvas.set_shape_coords(c, x0=s['x0']+dx)
-                    c.canvas.set_shape_coords(c, x1=s['x1']+dx)
+                self.canvas.set_shape_coords(self, x0=shape['x0']+dx, x1=shape['x1']+dx)
+                for c, s in initial_coords.items():
+                    c.canvas.set_shape_coords(c, x0=initial_coords[c]['x0']+dx, x1=initial_coords[c]['x1']+dx)
+                    self.components[c]['x0'] = initial_coords[c]['x0'] + dx
+                    self.components[c]['x1'] = initial_coords[c]['x1'] + dx
 
-        
         self.x0, self.y0, self.x1, self.y1 = self.canvas.calculate_shape_coords(shape)
+        for c, s in self.components.items():
+            x0, y0, x1, y1 = c.canvas.calculate_shape_coords(s)
+            c.coords(x0, y0, x1, y1)
         self.canvas.draw_grid()
 
     def attach(self, other, is_prime=True):
