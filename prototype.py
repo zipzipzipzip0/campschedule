@@ -163,7 +163,7 @@ class Rectangle:
                     c.canvas.set_shape_coords(c, y0=initial_coords[c]['y0']+dy, y1=initial_coords[c]['y1']+dy)
                     self.components[c]['y0'] = initial_coords[c]['y0'] + dy
                     self.components[c]['y1'] = initial_coords[c]['y1'] + dy
-                    c.update_component(component=self, y0=shape['y0']+dy)
+                c.update_component(component=self, y0=shape['y0']+dy)
 
         # East
         if (selected & (1 << 2)) and (shape['x1'] + dx >= shape['x0']) and not bump_east:
@@ -173,7 +173,7 @@ class Rectangle:
                     c.canvas.set_shape_coords(c, x0=initial_coords[c]['x0']+dx, x1=initial_coords[c]['x1']+dx)
                     self.components[c]['x0'] = initial_coords[c]['x0'] + dx
                     self.components[c]['x1'] = initial_coords[c]['x1'] + dx
-                    c.update_component(component=self, x1=shape['x1']+dx)
+                c.update_component(component=self, x1=shape['x1']+dx)
         # South
         if (selected & (1 << 1)) and (shape['y1'] + dy >= shape['y0']) and not bump_south:
             self.canvas.set_shape_coords(self, y1=shape['y1']+dy)
@@ -182,7 +182,7 @@ class Rectangle:
                     c.canvas.set_shape_coords(c, y0=initial_coords[c]['y0']+dy, y1=initial_coords[c]['y1']+dy)
                     self.components[c]['y0'] = initial_coords[c]['y0'] + dy
                     self.components[c]['y1'] = initial_coords[c]['y1'] + dy
-                    c.update_component(component=self, y1=shape['y1']+dy)
+                c.update_component(component=self, y1=shape['y1']+dy)
         # West
         if (selected & (1 << 0)) and (shape['x0'] + dx <= shape['x1']) and not bump_west:
             self.canvas.set_shape_coords(self, x0=shape['x0']+dx)
@@ -191,7 +191,7 @@ class Rectangle:
                     c.canvas.set_shape_coords(c, x0=initial_coords[c]['x0']+dx, x1=initial_coords[c]['x1']+dx)
                     self.components[c]['x0'] = initial_coords[c]['x0'] + dx
                     self.components[c]['x1'] = initial_coords[c]['x1'] + dx
-                    c.update_component(component=self, x0=shape['x0']+dx)
+                c.update_component(component=self, x0=shape['x0']+dx)
         # Center
         if (selected == 0b0000):
             if not (bump_north or bump_south):
