@@ -104,12 +104,12 @@ title.place(x=(window_x // 2)-(title.winfo_reqwidth() // 2))
 
 ### Draggable rectangles
 
-class Block:
-    def __init__(self, draggable=True):
-        self.draggable=draggable
+# class Block:
+#     def __init__(self, draggable=True):
+#         self.draggable=draggable
     
-    def attach(self, other):
-        # Check if other is adjacent
+#     def attach(self, other):
+#         # Check if other is adjacent
         
 
 rectangles = []
@@ -117,7 +117,7 @@ rectangles = []
 selected_rectangle = None
 initial_rect_coords = None
 
-# THRESHOLD_DISTANCE = 50
+THRESHOLD_DISTANCE = 50
 
 def start_drag(event):
     global start_x, start_y, selected_rectangle, initial_rect_coords
@@ -189,9 +189,9 @@ for c in range(0, len(camps)):
         draw_playground_time(camp, True)
 
 
-for c in range(0, len(camps)):
-    camp = matrix.iloc[c]
-    schedule(camp)
+# for c in range(0, len(camps)):
+#     camp = matrix.iloc[c]
+#     schedule(camp)
 
 for rect in rectangles:
     grid.tag_bind(rect, '<Button-1>', start_drag)
