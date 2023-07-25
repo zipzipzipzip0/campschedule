@@ -1,0 +1,5 @@
+This is an unorganized list of ideas and notes about the project.
+
+- Make an Activity class to encompass activities like pool time and playground time.
+- Attached rectangles need to move each other recursively.
+    - Maybe use a graph-like system to store attached rectangles.
