@@ -1,5 +1,7 @@
 import tkinter as tk
 import datetime as dt
+import pandas as pd
+import numpy as np
 
 class Rectangle:
     EDGE_WIDTH = 10
@@ -420,8 +422,8 @@ class Grid(tk.Canvas):
         """
         row_coords = [0] + self.row_coords + [self.height]
         column_coords = [0] + self.column_coords + [self.width]
-        row_height = row_coords[e['x']+1] - row_coords[e['x']]
-        column_width = column_coords[e['y']+1] - column_coords[e['y']]
+        row_height = row_coords[e['y']+1] - row_coords[e['y']]
+        column_width = column_coords[e['x']+1] - column_coords[e['x']]
         w = e['element'].winfo_reqwidth()
         h = e['element'].winfo_reqheight()
         x_coords = [column_coords[e['x']] + e['padx'], column_coords[e['x']] + column_width/2 - w/2, column_coords[e['x']+1] - e['padx']]
@@ -521,7 +523,6 @@ class Grid(tk.Canvas):
                        'padx' : padx,
                        'pady' : pady,
                        'alignment' : alignment}
-        #self.elements.append(new_element) # TODO: Use a dictionary for easy reference when a user wants to edit an element
         self.elements[element] = new_element
         self.draw_grid()
 
@@ -738,7 +739,7 @@ class Grid(tk.Canvas):
 
 class Schedule(tk.Tk):
     TITLE = 'Pool & Playground Schedule'
-    FRAME_COLOR = 'lightblue'
+    FRAME_COLOR = 'light gray'
     MARGIN_SIZE = 5
     def __init__(self):
         # Create root window
@@ -757,17 +758,20 @@ class Schedule(tk.Tk):
         self.schedule = self.create_schedule()
         self.option_menu = self.create_option_menu()
 
+        self.date = None
+
         self.update_elements()
 
     def update_elements(self):
         # TODO: Once Grid class is implemented, use a custom grid to store window elements
-        self.title.place(x=Schedule.MARGIN_SIZE, y=Schedule.MARGIN_SIZE, width=0.7 * (self.width - 2 * Schedule.MARGIN_SIZE), height=80)
+        self.title.place(x=Schedule.MARGIN_SIZE, y=Schedule.MARGIN_SIZE, width=0.8 * (self.width - 2 * Schedule.MARGIN_SIZE), height=80)
+        self.schedule.place(x=Schedule.MARGIN_SIZE, y=2*Schedule.MARGIN_SIZE+80, width=0.8 * (self.width - 2 * Schedule.MARGIN_SIZE), height=self.height-(3*Schedule.MARGIN_SIZE+80))
     
     ### Title and date selector
     def create_title(self):
         frame = tk.Frame(self)
         frame.config(bg=Schedule.FRAME_COLOR)
-        frame.config(width=0.7 * (self.width - 2 * Schedule.MARGIN_SIZE), height=80)
+        frame.config(width=0.8 * (self.width - 2 * Schedule.MARGIN_SIZE), height=80)
 
         title = tk.Label(frame, text=Schedule.TITLE, font=('Arial', 32))
         title.config(bg=Schedule.FRAME_COLOR)
@@ -779,14 +783,102 @@ class Schedule(tk.Tk):
     
     ### Grid containing camp names, times, and respective scheduled activities
     def create_schedule(self):
+        frame = tk.Frame(self)
+        frame.config(bg=Schedule.FRAME_COLOR)
+        width = 0.8 * (self.width - 2 * Schedule.MARGIN_SIZE)
+        height = self.height-(3*Schedule.MARGIN_SIZE+80)
+        frame.config(width=width, height=height)
+
         START_TIME = dt.time(hour=9, minute=0) # 9:00 AM
         END_TIME = dt.time(hour=16, minute=0)  # 4:00 PM
-        MINUTE_INTERVAL = dt.time(minute=15)   # 15 minutes
-        # Camp names
-        # Times
-        # New camp button
-        return
+        MINUTE_INTERVAL = dt.timedelta(minutes=15)   # 15 minutes
+
+        time_difference = (END_TIME.hour * 60 + END_TIME.minute) - (START_TIME.hour * 60 + START_TIME.minute)
+        num_intervals = int(time_difference // (MINUTE_INTERVAL.total_seconds() // 60))
+        columns = num_intervals + 1
+
+        matrix = pd.read_csv('Camps Matrix.csv')
+        camps = matrix.loc[matrix['Start Date'] == '24-Jul', 'Camp Name']
+        print(camps)
+        rows = len(camps) + 1
+
+        grid = Grid(frame, rows=rows, columns=columns)
+        grid.place(x=0, y=0, width=width, height=height)
+
+        grid_margin_top = 0
+        grid_time_labels = []
+        times = []
+        for t in range(0, num_intervals):
+            time = (dt.datetime.combine(dt.date.today(), START_TIME) + MINUTE_INTERVAL * t).time()
+            times.append(time)
+            label = tk.Label(grid, text=time.strftime('%I:%M').lstrip('0'), font=('Arial', 8), highlightthickness=0, borderwidth=0)
+            grid_margin_top = max(grid_margin_top, label.winfo_reqheight())
+            grid_time_labels.append(label)
+        grid.lock_row(grid_margin_top+10)
+
+        for c in range(0, len(grid_time_labels)):
+            grid.add_element(grid_time_labels[c], x=c+1, y=0, alignment='c', padx=0, pady=0)
+
+        grid_margin_left = 0
+        grid_camp_labels = []
+        for c in range(0, len(camps)):
+            label = tk.Label(grid, text=camps.iloc[c], font=('Arial', 12), highlightthickness=0, borderwidth=0)
+            grid_margin_left = max(grid_margin_left, label.winfo_reqwidth())
+            grid_camp_labels.append(label)
+        grid.lock_column(grid_margin_left+10)
+
+        for c in range(0, len(grid_camp_labels)):
+            grid.add_element(grid_camp_labels[c], x=0, y=c+1, alignment='c', padx=0, pady=0)
+
+        POOL_DURATION = 45
+        LOCKER_DURATION = 15
+        PLAYGROUND_DURATION = 30
+
+        for c in range(0, len(camps)):
+            camp = matrix.iloc[c]
+            if camp['Swim'] == True:
+                start = pd.to_datetime(camp['Pool Time'])
+                end = start + np.timedelta64(POOL_DURATION, 'm')
+                locker_start = start - np.timedelta64(LOCKER_DURATION, 'm')
+                locker_end = end + np.timedelta64(LOCKER_DURATION, 'm')
+
+                start = self.__time2coord(start, times)
+                end = self.__time2coord(end, times)
+                locker_start = self.__time2coord(locker_start, times)
+                locker_end = self.__time2coord(locker_end, times)
+
+                l1 = grid.add_shape('rectangle', x0=locker_start, y0=c+1, x1=start-1, y1=c+1, fill='yellow')
+                p = grid.add_shape('rectangle', x0=start, y0=c+1, x1=end-1, y1=c+1, fill='blue')
+                l2 = grid.add_shape('rectangle', x0=end, y0=c+1, x1=locker_end-1, y1=c+1, fill='yellow')
+
+                p.attach(l1)
+                p.attach(l2)
+            if camp['PG'] == True:
+                start = pd.to_datetime(camp['PG Time'])
+                end = start + np.timedelta64(PLAYGROUND_DURATION, 'm')
+
+                start = self.__time2coord(start, times)
+                end = self.__time2coord(end, times)
+
+                p = grid.add_shape('rectangle', x0=start, y0=c+1, x1=end-1, y1=c+1, fill='orange')
+            if camp['PG+'] == True:
+                start = pd.to_datetime(camp['PG+ Time'])
+                end = start + np.timedelta64(PLAYGROUND_DURATION, 'm')
+
+                start = self.__time2coord(start, times)
+                end = self.__time2coord(end, times)
+
+                p = grid.add_shape('rectangle', x0=start, y0=c+1, x1=end-1, y1=c+1, fill='orange')
+
+
+        return frame
     
+    def __time2coord(self, time, times_list):
+        for t in range(0, len(times_list)):
+            if time.to_pydatetime().time() == times_list[t]:
+                return t + 1
+        raise KeyError
+
     ### Option menu with various settings
     def create_option_menu(self):
         # Visibility options
@@ -856,5 +948,5 @@ def main():
 
 if __name__ == '__main__':
     #test_rectangle()
-    test_grid()
-    #main()
+    #test_grid()
+    main()
