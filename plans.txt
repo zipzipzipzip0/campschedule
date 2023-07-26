@@ -1,5 +1,14 @@
 This is an unorganized list of ideas and notes about the project.
 
 - Make an Activity class to encompass activities like pool time and playground time.
+
 - Attached rectangles need to move each other recursively.
     - Maybe use a graph-like system to store attached rectangles.
+
+- Create a menu screen to navigate different camp-related functions of the program.
+    - Activity scheduler
+    - Room chart maker
+    - Extended care roster
+    - Email generator
+
+- Use a machine learning algorithm to automate creating schedules and room charts.
