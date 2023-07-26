@@ -244,8 +244,8 @@ class Rectangle:
                                   'y0':b['y0'],
                                   'x1':b['x1'],
                                   'y1':b['y1']}
-        print(f'{a}\n{b}')
-        print(position)
+        # print(f'{a}\n{b}')
+        # print(position)
 
         if is_prime:
             other.attach(self, is_prime=False)
@@ -753,12 +753,12 @@ class Schedule(tk.Tk):
         self.height = self.winfo_height()
         self.bind('<Configure>', self.on_resize)
 
+        self.date = '17-Jul'
+
         # Create elements
         self.title = self.create_title()
         self.schedule = self.create_schedule()
         self.option_menu = self.create_option_menu()
-
-        self.date = None
 
         self.update_elements()
 
@@ -778,9 +778,20 @@ class Schedule(tk.Tk):
         title.place(x=Schedule.MARGIN_SIZE, y=Schedule.MARGIN_SIZE)
 
         #TODO: Date selector
+        options = ['17-Jul', '24-Jul', '31-Jul']
+        selected_option = tk.StringVar(frame)
+        selected_option.set(options[0])
+        dropdown_menu = tk.OptionMenu(frame, selected_option, *options, command=self.__change_date)
+        dropdown_menu.place(x=0.8 * (self.width - 2 * Schedule.MARGIN_SIZE) - 100, y=40)
 
         return frame
     
+    def __change_date(self, date):
+        self.date = date
+        self.schedule.destroy()
+        self.schedule = self.create_schedule()
+        self.update_elements()
+
     ### Grid containing camp names, times, and respective scheduled activities
     def create_schedule(self):
         frame = tk.Frame(self)
@@ -798,9 +809,9 @@ class Schedule(tk.Tk):
         columns = num_intervals + 1
 
         matrix = pd.read_csv('Camps Matrix.csv')
-        camps = matrix.loc[matrix['Start Date'] == '24-Jul', 'Camp Name']
-        print(camps)
-        rows = len(camps) + 1
+        camps = matrix.loc[matrix['Start Date'] == self.date]
+        # rows = len(camps) + 1
+        rows = 12
 
         grid = Grid(frame, rows=rows, columns=columns)
         grid.place(x=0, y=0, width=width, height=height)
@@ -822,20 +833,21 @@ class Schedule(tk.Tk):
         grid_margin_left = 0
         grid_camp_labels = []
         for c in range(0, len(camps)):
-            label = tk.Label(grid, text=camps.iloc[c], font=('Arial', 12), highlightthickness=0, borderwidth=0)
+            label = tk.Label(grid, text=camps.iloc[c]['Camp Name'], font=('Arial', 12), highlightthickness=0, borderwidth=0)
             grid_margin_left = max(grid_margin_left, label.winfo_reqwidth())
             grid_camp_labels.append(label)
-        grid.lock_column(grid_margin_left+10)
+        # grid.lock_column(grid_margin_left+10)
+        grid.lock_column(300)
 
         for c in range(0, len(grid_camp_labels)):
-            grid.add_element(grid_camp_labels[c], x=0, y=c+1, alignment='c', padx=0, pady=0)
+            grid.add_element(grid_camp_labels[c], x=0, y=c+1, alignment='w', padx=10, pady=0)
 
         POOL_DURATION = 45
         LOCKER_DURATION = 15
         PLAYGROUND_DURATION = 30
 
         for c in range(0, len(camps)):
-            camp = matrix.iloc[c]
+            camp = camps.iloc[c]
             if camp['Swim'] == True:
                 start = pd.to_datetime(camp['Pool Time'])
                 end = start + np.timedelta64(POOL_DURATION, 'm')
