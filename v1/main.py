@@ -1,20 +1,27 @@
+import tkinter as tk
 import PySimpleGUI as sg
 from ScheduleWindow import ScheduleWindow
 
-def test1():
-    # w = ScheduleWindow()
-    # layout = w.get_layout()
-    layout = [[sg.Text(text="Hello World")]]
+def main():
+    sg.theme('DarkGrey')
 
-    window = sg.Window("Schedule", layout)
+    w = ScheduleWindow()
+    layout = w.get_layout()
+
+    window = sg.Window("Schedule", layout, resizable=True, finalize=True)
+    window.maximize()
 
     while True:
         event, values = window.read()
 
         if event == sg.WINDOW_CLOSED or event == "Exit":
             break
+        elif event == "Maximize":
+            window.maximize()
+        elif event == "Restore":
+            window.normal()
 
     window.close()
 
 if __name__ == '__main__':
-    test1()
+    main()

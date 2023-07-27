@@ -7,25 +7,48 @@ class ScheduleWindow:
     The layout consists of a menu bar, a large title, and a formatted grid.
     """
     def __init__(self):
-        raise NotImplementedError
+        self.menubar = self.__create_menubar()
+        self.title = self.__create_title()
+        self.grid = self.__create_grid()
+        self.layout = [
+            [self.menubar],
+            [sg.Column([
+                [self.title],
+                [self.grid]
+            ], element_justification='center', vertical_alignment='center', expand_x=True, expand_y=True)]
+        ]
     
     def get_layout(self):
         """
-        Return a layout that can be used to make a window. Calls helper methods for each window element.
+        Returns the layout created upon initialization.
         """
-        raise NotImplementedError
+        return self.layout
     
     def __create_menubar(self):
         """
         **The menubar may need to call methods from a helper class.
         """
-        raise NotImplementedError
+        menu_layout = [
+            ['&File', ['&Open', '&Save', 'E&xit']],
+        ]
+        return sg.MenuBar(menu_layout)
     
     def __create_title(self):
-        raise NotImplementedError
+        font = ("72", 36, "bold")
+        text = sg.Text("ACTIVITY SCHEDULE", font=font)
+        date = sg.Text("7/31/23 - 8/4/23", font=font)
+        title = sg.Column([
+            [text, sg.Stretch(), date]
+        ], expand_x=True)
+        return title
     
     def __create_grid(self):
         """
         Calls upon the Schedule class to generate a custom-formatted instance of the Grid class.
         """
-        raise NotImplementedError
+        frame_layout = [
+            [sg.Frame('', [[sg.Canvas(size=(100, 100), background_color='lightgray', key='-CANVAS-', expand_x=True, expand_y=True)]],
+                      background_color='black', relief=sg.RELIEF_FLAT, pad=(10, 10), expand_x=True, expand_y=True)]
+        ]
+        
+        return sg.Frame("Schedule", frame_layout, expand_x=True, expand_y=True)
