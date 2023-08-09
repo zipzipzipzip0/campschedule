@@ -24,12 +24,14 @@ class ScheduleWindow:
         """
         return self.layout
     
+    def set_layout(self, )
+
     def __create_menubar(self):
         """
         **The menubar may need to call methods from a helper class.
         """
         menu_layout = [
-            ['&File', ['&Open', '&Save', 'E&xit']],
+            ['&File', ['&Open', '&Save', 'E&xit']]
         ]
         return sg.MenuBar(menu_layout)
     
@@ -46,9 +48,12 @@ class ScheduleWindow:
         """
         Calls upon the Schedule class to generate a custom-formatted instance of the Grid class.
         """
+
+        canvas = sg.Canvas(background_color='light gray', key='-CANVAS-', expand_x=True, expand_y=True)
+
         frame_layout = [
-            [sg.Frame('', [[sg.Canvas(size=(100, 100), background_color='lightgray', key='-CANVAS-', expand_x=True, expand_y=True)]],
+            [sg.Frame('', [[canvas]],
                       background_color='black', relief=sg.RELIEF_FLAT, pad=(10, 10), expand_x=True, expand_y=True)]
         ]
-        
+
         return sg.Frame("Schedule", frame_layout, expand_x=True, expand_y=True)
