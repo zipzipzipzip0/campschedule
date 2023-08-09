@@ -1,3 +1,6 @@
+"""
+The Camp Assistant Program
+"""
 import tkinter as tk
 import PySimpleGUI as sg
 from ScheduleWindow import ScheduleWindow
